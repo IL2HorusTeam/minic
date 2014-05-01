@@ -3,7 +3,7 @@ import gtk
 
 import tx_logging
 
-from minic.resources import image_path
+from minic.resources import image_path, ui_path
 from minic.util import ugettext_lazy as _
 
 
@@ -26,6 +26,40 @@ def show_error(message, window=None):
     show_message(message, gtk.MESSAGE_ERROR, window)
 
 
+class SettingsWindow(object):
+
+    def __init__(self):
+        root = gtk.Builder()
+        root.add_from_file(ui_path('settings'))
+
+        self.window = root.get_object('window')
+        self.window.set_size_request(350, 70)
+
+        self.server_path = root.get_object('server_path')
+        self.add_filter_for_path_selector()
+
+        signals = {
+            'on_b_apply_clicked': self.on_b_apply_clicked,
+            'on_b_cancel_clicked': self.on_b_cancel_clicked,
+        }
+        root.connect_signals(signals)
+
+    def add_filter_for_path_selector(self):
+        f_filter = gtk.FileFilter()
+        f_filter.set_name("IL-2 FB DS")
+        f_filter.add_pattern("il2server.exe")
+        self.server_path.add_filter(f_filter)
+
+    def show(self):
+        self.window.show()
+
+    def on_b_apply_clicked(self, widget):
+        pass
+
+    def on_b_cancel_clicked(self, widget):
+        self.window.destroy()
+
+
 class MainWindow(gtk.Window):
 
     title = _("Minic")
@@ -33,8 +67,6 @@ class MainWindow(gtk.Window):
 
     def __init__(self):
         super(MainWindow, self).__init__()
-
-        LOG.error('hello')
 
         self.set_title(self.title)
         self.set_size_request(250, 150)
@@ -70,7 +102,7 @@ class MainWindow(gtk.Window):
         # Intercept only left mouse button
         if event.button != 1:
             return False
-        print 'on_menu_settings_click'
+        SettingsWindow().show()
 
     def build_tray_icon(self):
         icon = gtk.status_icon_new_from_file(image_path(self.icon_name))

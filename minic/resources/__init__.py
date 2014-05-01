@@ -11,3 +11,8 @@ def resource_path(*args):
 
 def image_path(*args):
     return resource_path('images', *args)
+
+
+def ui_path(name):
+    name = name + '.glade'
+    return resource_path('ui', name)
