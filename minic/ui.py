@@ -7,7 +7,23 @@ from minic.resources import image_path
 from minic.util import ugettext_lazy as _
 
 
-LOG = tx_logging.getLogger(__name__)
+LOG = tx_logging.getLogger('ui')
+
+
+def show_message(message, message_type, window=None):
+    md = gtk.MessageDialog(
+        window,
+        gtk.DIALOG_DESTROY_WITH_PARENT,
+        message_type,
+        gtk.BUTTONS_CLOSE,
+        message
+    )
+    md.run()
+    md.destroy()
+
+
+def show_error(message, window=None):
+    show_message(message, gtk.MESSAGE_ERROR, window)
 
 
 class MainWindow(gtk.Window):
@@ -17,6 +33,8 @@ class MainWindow(gtk.Window):
 
     def __init__(self):
         super(MainWindow, self).__init__()
+
+        LOG.error('hello')
 
         self.set_title(self.title)
         self.set_size_request(250, 150)
