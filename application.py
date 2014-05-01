@@ -21,6 +21,30 @@ from minic.ui import show_error, MainWindow
 from minic.util import ugettext_lazy as _
 
 
+class PidLock(object):
+
+    def __init__(self):
+        self.pidpath = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), 'minic.pid')
+        if not os.path.exists(self.pidpath):
+            return
+        with open(self.pidpath, 'r') as f:
+            pid = f.readline().strip()
+        try:
+            os.kill(int(pid), 0)
+        except OSError:
+            pass
+        else:
+            raise RuntimeError(_("Another instance is still running"))
+
+    def __enter__(self):
+        with open(self.pidpath, 'w') as f:
+            f.write(str(os.getpid()))
+
+    def __exit__(self, *args):
+        os.remove(self.pidpath)
+
+
 def check_dir(path):
     if not os.path.exists(path):
         try:
@@ -51,18 +75,18 @@ def setup_logging():
 
 def main():
     try:
-        check_dirs()
-    except RuntimeError as e:
-        show_error(unicode(e))
-        return
-    try:
-        setup_logging()
+        with PidLock():
+            try:
+                check_dirs()
+                setup_logging()
+            except Exception as e:
+                show_error(unicode(e))
+                return
+            gtk.settings_get_default().props.gtk_button_images = True
+            MainWindow()
+            reactor.run()
     except Exception as e:
         show_error(unicode(e))
-        return
-    gtk.settings_get_default().props.gtk_button_images = True
-    MainWindow()
-    reactor.run()
 
 
 if __name__ == "__main__":
