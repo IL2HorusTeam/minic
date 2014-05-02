@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
+import ConfigParser
 import json
 import platform
 import os
+
+from minic.util import ugettext_lazy as _
 
 
 APPLICATION_GROUP = 'IL2HorusTeam'
@@ -22,34 +25,33 @@ LOG_SETTINGS = {
 }
 
 
-class Settings(object):
+class UserSettings(object):
 
-    filename = None
+    file_name = 'minic.conf'
     __container = None
 
-    def __init__(self, filename):
-        self.filename = filename
+    def __init__(self):
         self.__container = {}
 
     @property
-    def filepath(self):
-        return os.path.join(USER_FILES_ROOT, self.filename)
+    def file_path(self):
+        return os.path.join(USER_FILES_ROOT, self.file_name)
 
     def load(self):
         """
         .. todo:: may raise some exception
         """
-        if not os.path.exists(self.filepath):
+        if not os.path.exists(self.file_path):
             self.__container = {}
         else:
-            with open(self.filepath, 'r') as f:
+            with open(self.file_path, 'r') as f:
                 self.__container = json.load(f)
 
     def sync(self):
         """
         .. todo:: may raise some exception
         """
-        with open(self.filepath, 'w') as f:
+        with open(self.file_path, 'w') as f:
             json.dump(self.__container, f, indent=2)
 
     def __getattr__(self, name):
@@ -61,12 +63,73 @@ class Settings(object):
     def __setattr__(self, name, value):
         try:
             # Do not call `hasattr` because `__getattr__` will always succeed
-            super(Settings, self).__getattribute__(name)
+            super(UserSettings, self).__getattribute__(name)
         except AttributeError:
             self.__container[name] = value
         else:
             # If attribute belongs directly to instance
-            super(Settings, self).__setattr__(name, value)
+            super(UserSettings, self).__setattr__(name, value)
 
 
-user_settings = Settings('minic.conf')
+user_settings = UserSettings()
+
+
+class ServerSettings(dict):
+
+    file_name = 'confs.ini'
+
+    def __init__(self, *args, **kwargs):
+        super(ServerSettings, self).__init__(*args, **kwargs)
+        self.config = ConfigParser.ConfigParser()
+
+    def load(self):
+        self.clear()
+        self.config.read(self._file_path())
+
+        # Path to events log
+        self['log_path'] = self._get_value('game', 'eventlog')
+        # Max number of network channels
+        self['max_channels'] = int(self._get_value('NET', 'serverChannels', 32))
+        # Difficulty value
+        self['difficulty'] = int(self._get_value('NET', 'difficulty', 0))
+
+        # Console host
+        self['cs_host'] = self._get_value('NET', 'localHost', '127.0.0.1')
+        # Console port
+        self['cs_port'] = int(self._get_value('Console', 'IP', 20000))
+
+        # Device Link host
+        self['dl_host'] = self._get_value('DeviceLink', 'host', self['cs_host'])
+        # Device Link port
+        self['dl_port'] = int(self._get_value('DeviceLink', 'port', 10000))
+
+        # Server name
+        self['name'] = self._get_value('NET', 'serverName').decode('unicode-escape')
+        # Server description
+        self['description'] = self._get_value('NET', 'serverDescription').decode('unicode-escape')
+
+    def _get_value(self, section_name, attr_name, default=None):
+        try:
+            return self.config.get(section_name, attr_name)
+        except:
+            return default
+
+    def _file_path(self):
+        server_path = user_settings.server_path
+        if server_path is None:
+            raise ValueError(_("Path to server is not set"))
+        server_path = os.path.dirname(server_path)
+        file_path = os.path.join(server_path, self.file_name)
+        if not os.path.exists(file_path):
+            raise OSError(
+                _("Server config '{0}' is not found").format(self.file_name))
+        return file_path
+
+    def __getattr__(self, name):
+        if name in self:
+            return self[name]
+        else:
+            raise AttributeError("'{0}' object has no attribute '{1}'".format(
+                                 self.__class__.__name__, name))
+
+server_settings = ServerSettings()
