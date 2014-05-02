@@ -87,9 +87,11 @@ class MainWindow(gtk.Window):
         self.build_tray_icon()
 
         menu_bar = self.build_menu_bar()
+        connection_frame = self.build_connection_frame()
 
-        vbox = gtk.VBox(False, 2)
-        vbox.pack_start(menu_bar, False, False, 0)
+        vbox = gtk.VBox(False, 3)
+        vbox.pack_start(menu_bar, expand=False, fill=False, padding=0)
+        vbox.pack_start(connection_frame, expand=False, fill=True, padding=0)
         self.add(vbox)
 
         self.connect('delete-event', lambda w, e: w.hide() or True)
@@ -115,6 +117,59 @@ class MainWindow(gtk.Window):
         if event.button != 1:
             return False
         SettingsWindow().show()
+
+    def build_connection_frame(self):
+        # Stack ----------------------------------------------------------------
+        stack = gtk.Notebook()
+        self.connection_stack = stack
+        stack.set_show_tabs(False)
+        stack.set_show_border(False)
+
+        # Build pages ----------------------------------------------------------
+        def to_page(label, button):
+            hbox = gtk.HBox(False, 2)
+            hbox.pack_start(label, expand=False, fill=False, padding=0)
+            hbox.pack_end(button, expand=False, fill=False, padding=0)
+            stack.append_page(hbox)
+
+        # Disconnected page
+        label = gtk.Label(_("Not established"))
+        label.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse('#B00'))
+        button = gtk.Button(_("Connect"), gtk.STOCK_CONNECT)
+        button.connect('clicked', self.on_connect_clicked)
+        to_page(label, button)
+
+        # Connected page
+        label = gtk.Label(_("Established"))
+        label.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse('#080'))
+        button = gtk.Button(_("Disconnect"), gtk.STOCK_DISCONNECT)
+        button.connect('clicked', self.on_disconnect_clicked)
+        to_page(label, button)
+
+        # Connecting page
+        label = gtk.Label(_("Connecting") + '...')
+        label.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse('#555'))
+        button = gtk.Button(_("Stop"), gtk.STOCK_STOP)
+        button.connect('clicked', self.on_connect_stop_clicked)
+        to_page(label, button)
+
+        # Build frame ----------------------------------------------------------
+        alignment = gtk.Alignment(0.5, 0.5, 1.0, 1.0)
+        alignment.set_padding(3, 3, 3, 3)
+        alignment.add(stack)
+
+        frame = gtk.Frame(label=_("Connection"))
+        frame.add(alignment)
+        return frame
+
+    def on_connect_clicked(self, widget):
+        print 'on_connect_clicked'
+
+    def on_disconnect_clicked(self, widget):
+        print 'on_disconnect_clicked'
+
+    def on_connect_stop_clicked(self, widget):
+        print 'on_connect_stop_clicked'
 
     def build_tray_icon(self):
         icon = gtk.status_icon_new_from_file(image_path(self.icon_name))
