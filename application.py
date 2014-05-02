@@ -16,7 +16,8 @@ from twisted.python.logfile import LogFile
 
 from tx_logging.observers import LevelFileLogObserver
 
-from minic.settings import USER_FILES_ROOT, LOG_ROOT, LOG_SETTINGS
+from minic.settings import (
+    USER_FILES_ROOT, LOG_ROOT, LOG_SETTINGS, user_settings, )
 from minic.ui import show_error, MainWindow
 from minic.util import ugettext_lazy as _
 
@@ -75,19 +76,29 @@ def setup_logging():
 
 def main():
     try:
-        with PidLock():
-            try:
-                check_dirs()
-                setup_logging()
-            except Exception as e:
-                show_error(unicode(e))
-                return
-            gtk.settings_get_default().props.gtk_button_images = True
-            MainWindow()
-            reactor.run()
+        check_dirs()
+    except RuntimeError as e:
+        show_error(e)
+        return
+    try:
+        setup_logging()
     except Exception as e:
-        show_error(unicode(e))
+        show_error(_("Failed to setup logging: {0}").format(unicode(e)))
+        return
+    try:
+        user_settings.load()
+    except Exception as e:
+        show_error(_("Failed load user settings: {0}").format(unicode(e)))
+        return
+
+    gtk.settings_get_default().props.gtk_button_images = True
+    MainWindow()
+    reactor.run()
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        with PidLock():
+            main()
+    except Exception as e:
+        show_error(e)

@@ -4,6 +4,7 @@ import gtk
 import tx_logging
 
 from minic.resources import image_path, ui_path
+from minic.settings import user_settings
 from minic.util import ugettext_lazy as _
 
 
@@ -16,8 +17,7 @@ def show_message(message, message_type, window=None):
         gtk.DIALOG_DESTROY_WITH_PARENT,
         message_type,
         gtk.BUTTONS_CLOSE,
-        message
-    )
+        unicode(message))
     md.run()
     md.destroy()
 
@@ -36,7 +36,7 @@ class SettingsWindow(object):
         self.window.set_size_request(350, 70)
 
         self.server_path = root.get_object('server_path')
-        self.add_filter_for_path_selector()
+        self._add_filter_for_path_selector()
 
         signals = {
             'on_b_apply_clicked': self.on_b_apply_clicked,
@@ -44,17 +44,29 @@ class SettingsWindow(object):
         }
         root.connect_signals(signals)
 
-    def add_filter_for_path_selector(self):
+        self._load_data()
+
+    def _add_filter_for_path_selector(self):
         f_filter = gtk.FileFilter()
         f_filter.set_name("IL-2 FB DS")
         f_filter.add_pattern("il2server.exe")
         self.server_path.add_filter(f_filter)
 
+    def _load_data(self):
+        p = user_settings.server_path
+        if p:
+            self.server_path.set_filename(p)
+
+    def _save_data(self):
+        user_settings.server_path = self.server_path.get_filename()
+        user_settings.sync()
+
     def show(self):
         self.window.show()
 
     def on_b_apply_clicked(self, widget):
-        pass
+        self._save_data()
+        self.window.destroy()
 
     def on_b_cancel_clicked(self, widget):
         self.window.destroy()
