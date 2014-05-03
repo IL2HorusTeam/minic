@@ -25,6 +25,10 @@ LOG_SETTINGS = {
 }
 
 
+CONSOLE_TIMEOUT = 1.0
+DEVICE_LINK_TIMEOUT = 1.0
+
+
 class UserSettings(object):
 
     file_name = 'minic.conf'
@@ -87,19 +91,20 @@ class ServerSettings(dict):
         self.config.read(self._file_path())
 
         # Path to events log
-        self['log_path'] = self._get_value('game', 'eventlog')
+        self['log_path'] = self._get_log_path()
+
         # Max number of network channels
         self['max_channels'] = int(self._get_value('NET', 'serverChannels', 32))
         # Difficulty value
         self['difficulty'] = int(self._get_value('NET', 'difficulty', 0))
 
         # Console host
-        self['cs_host'] = self._get_value('NET', 'localHost', '127.0.0.1')
+        self['cl_host'] = self._get_value('NET', 'localHost', '127.0.0.1')
         # Console port
-        self['cs_port'] = int(self._get_value('Console', 'IP', 20000))
+        self['cl_port'] = int(self._get_value('Console', 'IP', 20000))
 
         # Device Link host
-        self['dl_host'] = self._get_value('DeviceLink', 'host', self['cs_host'])
+        self['dl_host'] = self._get_value('DeviceLink', 'host', self['cl_host'])
         # Device Link port
         self['dl_port'] = int(self._get_value('DeviceLink', 'port', 10000))
 
@@ -107,6 +112,13 @@ class ServerSettings(dict):
         self['name'] = self._get_value('NET', 'serverName').decode('unicode-escape')
         # Server description
         self['description'] = self._get_value('NET', 'serverDescription').decode('unicode-escape')
+
+    def _get_log_path(self):
+        value = self._get_value('game', 'eventlog')
+        if value is None:
+            raise ValueError(
+                _("Events log path is not set in {0}").format(self.file_name))
+        return os.path.join(os.path.dirname(user_settings.server_path), value)
 
     def _get_value(self, section_name, attr_name, default=None):
         try:

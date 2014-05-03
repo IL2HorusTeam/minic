@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 import gtk
-
 import tx_logging
 
 from minic.resources import image_path, ui_path
+from minic.service import root_service
 from minic.settings import user_settings
 from minic.util import ugettext_lazy as _
 
@@ -77,6 +77,11 @@ class MainWindow(gtk.Window):
     title = _("Minic")
     icon_name = "logo.png"
 
+    class CONNECTION_TABS(object):
+        DISCONNECTED = 0
+        CONNECTED = 1
+        CONNECTING = 2
+
     def __init__(self):
         super(MainWindow, self).__init__()
 
@@ -89,11 +94,15 @@ class MainWindow(gtk.Window):
         menu_bar = self.build_menu_bar()
         connection_frame = self.build_connection_frame()
 
+        # Build layout ---------------------------------------------------------
         vbox = gtk.VBox(False, 3)
         vbox.pack_start(menu_bar, expand=False, fill=False, padding=0)
         vbox.pack_start(connection_frame, expand=False, fill=True, padding=0)
         self.add(vbox)
 
+        root_service.set_callbacks(self.on_connection_done,
+                                   self.on_connection_closed,
+                                   self.on_connection_lost)
         self.connect('delete-event', lambda w, e: w.hide() or True)
         self.show_all()
 
@@ -107,7 +116,7 @@ class MainWindow(gtk.Window):
 
         # Quit -----------------------------------------------------------------
         m_quit = gtk.MenuItem(_("Quit"))
-        m_quit.connect('activate', gtk.main_quit)
+        m_quit.connect('activate', self.on_quit)
         m_bar.append(m_quit)
 
         return m_bar
@@ -158,23 +167,39 @@ class MainWindow(gtk.Window):
         alignment.set_padding(3, 3, 3, 3)
         alignment.add(stack)
 
-        frame = gtk.Frame(label=_("Connection"))
+        frame = gtk.Frame(label=_("Server connection"))
         frame.add(alignment)
+
         return frame
 
     def on_connect_clicked(self, widget):
-        print 'on_connect_clicked'
-
-    def on_disconnect_clicked(self, widget):
-        print 'on_disconnect_clicked'
+        try:
+            root_service.startService()
+        except Exception as e:
+            show_error(e)
+        else:
+            self.connection_stack.set_current_page(
+                MainWindow.CONNECTION_TABS.CONNECTING)
 
     def on_connect_stop_clicked(self, widget):
-        print 'on_connect_stop_clicked'
+        self.stop_root()
+        self.connection_stack.set_current_page(
+            MainWindow.CONNECTION_TABS.DISCONNECTED)
+
+    def on_disconnect_clicked(self, widget):
+        self.stop_root()
 
     def build_tray_icon(self):
         icon = gtk.status_icon_new_from_file(image_path(self.icon_name))
         icon.set_tooltip(self.title)
+        icon.connect('activate', self.on_tray_icon_activate)
         icon.connect('popup-menu', self.on_tray_icon_popup)
+
+    def on_tray_icon_activate(self, widget):
+        if self.props.visible:
+            self.hide()
+        else:
+            self.show()
 
     def on_tray_icon_popup(self, icon, event_button, event_time):
         menu = gtk.Menu()
@@ -206,7 +231,33 @@ class MainWindow(gtk.Window):
         img.show()
         m_quit.set_image(img)
         menu.append(m_quit)
-        m_quit.connect('activate', gtk.main_quit)
+        m_quit.connect('activate', self.on_quit)
 
         menu.show_all()
         menu.popup(None, None, None, event_button, event_time)
+
+    def stop_root(self):
+        def errback(reason):
+            LOG.error("Failed to stop root service: {0}".format(
+                      unicode(reason.value)))
+        return root_service.stopService().addErrback(errback)
+
+    def on_quit(self, *args):
+        return self.stop_root().addBoth(lambda unused: gtk.main_quit())
+
+    def on_connection_done(self, *args):
+        self.connection_stack.set_current_page(
+            MainWindow.CONNECTION_TABS.CONNECTED)
+
+    def on_connection_closed(self, *args):
+        self.connection_stack.set_current_page(
+            MainWindow.CONNECTION_TABS.DISCONNECTED)
+        self._on_disconnected()
+
+    def on_connection_lost(self, reason):
+        self.connection_stack.set_current_page(
+            MainWindow.CONNECTION_TABS.CONNECTING)
+        self._on_disconnected()
+
+    def _on_disconnected(self):
+        pass
