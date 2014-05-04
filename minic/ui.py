@@ -254,20 +254,36 @@ class MainWindow(gtk.Window):
         return root_service.stopService().addErrback(errback)
 
     def build_missions_frame(self):
-        table = gtk.Table(rows=4, columns=2, homogeneous=False)
-        table.set_col_spacings(10)
 
         def to_label(name):
             label = gtk.Label(name)
             label.set_alignment(xalign=0, yalign=0.5)
             return label
 
+        def to_button(stock):
+            image = gtk.Image()
+            image.set_from_stock(stock, gtk.ICON_SIZE_BUTTON)
+            button = gtk.Button()
+            button.add(image)
+            return button
+
+        table = gtk.Table(rows=4, columns=2, homogeneous=False)
+        table.set_col_spacings(10)
+
         # Name row -------------------------------------------------------------
         label = to_label(_("Current"))
-        table.attach(label, 0, 1, 0, 1, gtk.FILL)
-
         mission_selector = gtk.combo_box_new_text()
-        table.attach(mission_selector, 1, 2, 0, 1)
+        mission_selector.set_tooltip_text(_("Current mission"))
+
+        button = to_button(gtk.STOCK_EDIT)
+        button.set_tooltip_text(_("Edit missions list"))
+
+        hbox = gtk.HBox(False, 2)
+        hbox.pack_start(mission_selector, True, True, 0)
+        hbox.pack_start(button, False, False, 0)
+
+        table.attach(label, 0, 1, 0, 1, gtk.FILL)
+        table.attach(hbox, 1, 2, 0, 1)
 
         # State row ------------------------------------------------------------
         label = to_label(_("State"))
@@ -284,14 +300,7 @@ class MainWindow(gtk.Window):
         table.attach(label, 1, 2, 2, 3)
 
         # Controls row ---------------------------------------------------------
-        def to_button(stock):
-            image = gtk.Image()
-            image.set_from_stock(stock, gtk.ICON_SIZE_BUTTON)
-            button = gtk.Button()
-            button.add(image)
-            return button
-
-        hbox = gtk.HBox(False, 8)
+        hbox = gtk.HBox(False, 7)
         alignment = gtk.Alignment(0.5, 0.5, 1.0, 1.0)
         alignment.set_padding(5, 0, 0, 0)
         alignment.add(hbox)
@@ -325,10 +334,6 @@ class MainWindow(gtk.Window):
         button = to_button(gtk.STOCK_GOTO_LAST)
         button.set_tooltip_text(_("Last mission"))
         hbox.pack_start(button, False, False, 0)
-
-        button = gtk.Button(_("Edit"), gtk.STOCK_EDIT)
-        button.set_tooltip_text(_("Edit missions"))
-        hbox.pack_end(button, False, False, 0)
 
         # Build frame ----------------------------------------------------------
         alignment = gtk.Alignment(0.5, 0.5, 1.0, 1.0)
