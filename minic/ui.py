@@ -36,12 +36,9 @@ class SettingsDialog(gtk.Dialog):
             buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL))
 
         b_apply = self.add_button(gtk.STOCK_APPLY, gtk.RESPONSE_APPLY)
-        b_apply.connect('clicked', self.on_b_apply_clicked)
+        b_apply.connect('clicked', self.on_apply_clicked)
 
-        icon = self.render_icon(gtk.STOCK_PREFERENCES, gtk.ICON_SIZE_MENU)
-        self.set_icon(icon)
         self.set_default_size(350, 70)
-
         self._build_components()
         self._load_data()
         self.show_all()
@@ -71,9 +68,129 @@ class SettingsDialog(gtk.Dialog):
         if p:
             self.server_path.set_filename(p)
 
-    def on_b_apply_clicked(self, widget):
+    def on_apply_clicked(self, widget):
         user_settings.server_path = self.server_path.get_filename()
         user_settings.sync()
+
+
+class MissionsDialog(gtk.Dialog):
+
+    def __init__(self, parent):
+        super(MissionsDialog, self).__init__(
+            title=_("Missions"),
+            parent=parent,
+            flags=gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+            buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL))
+
+        b_apply = self.add_button(gtk.STOCK_APPLY, gtk.RESPONSE_APPLY)
+        b_apply.connect('clicked', self.on_apply_clicked)
+
+        self.set_default_size(500, 300)
+        self._build_components()
+        self.show_all()
+
+    def _build_components(self):
+        scrolled_tree = self._build_treeview()
+        panel = self._build_side_panel()
+
+        hbox = gtk.HBox(False, 3)
+        hbox.pack_start(scrolled_tree, expand=True, fill=True, padding=0)
+        hbox.pack_end(panel, expand=False, fill=False, padding=0)
+
+        self.vbox.pack_start(hbox, True, True, 0)
+
+    def _build_treeview(self):
+        self.store = gtk.ListStore(str, str, int)
+        self.treeview = gtk.TreeView(model=self.store)
+
+        # Name column ----------------------------------------------------------
+        renderer = gtk.CellRendererText()
+        renderer.set_property('editable', True)
+        column = gtk.TreeViewColumn(_("Name"), renderer, text=0)
+        column.set_sizing(gtk.TREE_VIEW_COLUMN_AUTOSIZE)
+        column.set_resizable(True)
+        column.set_expand(True)
+        self.treeview.append_column(column)
+
+        # File column ----------------------------------------------------------
+        renderer = gtk.CellRendererText()
+        renderer.set_property('editable', True)
+        column = gtk.TreeViewColumn(_("File"), renderer, text=1)
+        column.set_sizing(gtk.TREE_VIEW_COLUMN_AUTOSIZE)
+        column.set_resizable(True)
+        column.set_expand(True)
+        self.treeview.append_column(column)
+
+        # Duration column ------------------------------------------------------
+        renderer = gtk.CellRendererText()
+        renderer.set_property('editable', True)
+        column = gtk.TreeViewColumn(_("Duration (min)"), renderer, text=2)
+        self.treeview.append_column(column)
+
+        # Build scrolled window ------------------------------------------------
+        scrolled_window = gtk.ScrolledWindow()
+        scrolled_window.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
+        scrolled_window.add(self.treeview)
+
+        return scrolled_window
+
+    def _build_side_panel(self):
+        vbox = gtk.VBox(False, 3)
+
+        button = gtk.Button(stock=gtk.STOCK_NEW)
+        button.set_tooltip_text(_("Add new mission to list"))
+        button.connect('clicked', self.on_new_clicked)
+        vbox.pack_start(button, False, False, 0)
+
+        button = gtk.Button(stock=gtk.STOCK_DELETE)
+        button.set_tooltip_text(_("Delete selected mission from list"))
+        button.connect('clicked', self.on_delete_clicked)
+        vbox.pack_start(button, False, False, 0)
+
+        vbox.pack_start(gtk.HSeparator(), False, False, 0)
+
+        button = gtk.Button(stock=gtk.STOCK_GOTO_TOP)
+        button.set_tooltip_text(_("Move selected mission to top"))
+        button.connect('clicked', self.on_move_to_top)
+        vbox.pack_start(button, False, False, 0)
+
+        button = gtk.Button(stock=gtk.STOCK_GO_UP)
+        button.set_tooltip_text(_("Move selected mission up"))
+        button.connect('clicked', self.on_move_up)
+        vbox.pack_start(button, False, False, 0)
+
+        button = gtk.Button(stock=gtk.STOCK_GO_DOWN)
+        button.set_tooltip_text(_("Move selected mission down"))
+        button.connect('clicked', self.on_move_down)
+        vbox.pack_start(button, False, False, 0)
+
+        button = gtk.Button(stock=gtk.STOCK_GOTO_BOTTOM)
+        button.set_tooltip_text(_("Move selected mission to bottom"))
+        button.connect('clicked', self.on_move_to_bottom)
+        vbox.pack_start(button, False, False, 0)
+
+        return vbox
+
+    def on_new_clicked(self, widget):
+        print 'on_new_clicked'
+
+    def on_delete_clicked(self, widget):
+        print 'on_delete_clicked'
+
+    def on_move_to_top(self, widget):
+        print 'on_move_to_top'
+
+    def on_move_up(self, widget):
+        print 'on_move_up'
+
+    def on_move_down(self, widget):
+        print 'on_move_down'
+
+    def on_move_to_bottom(self, widget):
+        print 'on_move_to_bottom'
+
+    def on_apply_clicked(self, widget):
+        print 'on_apply_clicked'
 
 
 class MainWindow(gtk.Window):
@@ -277,6 +394,7 @@ class MainWindow(gtk.Window):
 
         button = to_button(gtk.STOCK_EDIT)
         button.set_tooltip_text(_("Edit missions list"))
+        button.connect('clicked', self.on_edit_missions_clicked)
 
         hbox = gtk.HBox(False, 2)
         hbox.pack_start(mission_selector, True, True, 0)
@@ -344,6 +462,12 @@ class MainWindow(gtk.Window):
         frame.add(alignment)
 
         return frame
+
+    def on_edit_missions_clicked(self, widget):
+        d = MissionsDialog(self)
+        result = d.run()
+        # TODO:
+        d.destroy()
 
     def on_connection_done(self, *args):
         self.connection_stack.set_current_page(
