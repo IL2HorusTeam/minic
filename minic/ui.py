@@ -100,8 +100,8 @@ class MissionsDialog(gtk.Dialog):
         self.vbox.pack_start(hbox, True, True, 0)
 
     def _build_treeview(self):
-        self.store = gtk.ListStore(str, str, int)
-        self.treeview = gtk.TreeView(model=self.store)
+        store = gtk.ListStore(str, str, int)
+        self.treeview = gtk.TreeView(model=store)
 
         # Name column ----------------------------------------------------------
         renderer = gtk.CellRendererText()
@@ -129,7 +129,7 @@ class MissionsDialog(gtk.Dialog):
 
         # Build scrolled window ------------------------------------------------
         scrolled_window = gtk.ScrolledWindow()
-        scrolled_window.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
+        scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         scrolled_window.add(self.treeview)
 
         return scrolled_window
@@ -172,7 +172,42 @@ class MissionsDialog(gtk.Dialog):
         return vbox
 
     def on_new_clicked(self, widget):
-        print 'on_new_clicked'
+        if len(self.store) == 0:
+            # Create default row
+            data = (_("Some mission"), None, 60)
+            cursor = 0
+        else:
+            # Copy existing row
+            cursor = self.current_cursor
+            selected_name, file_name, duration = self.store[cursor]
+
+            def split_name(name):
+                chunks = name.rsplit('.', 1)
+                if len(chunks) == 1:
+                    return chunks[0], 0
+                else:
+                    return chunks[0], int(chunks[1])
+
+            # Define starting suffix for name of new mission
+            name, suffix = split_name(selected_name)
+            suffix += 1
+
+            # Fix suffix if name already used
+            for i, row in enumerate(self.store):
+                if i == cursor:
+                    continue
+                i_name, i_suffix = split_name(name=row[0])
+                if i_name != name or not i_suffix:
+                    continue
+                if suffix <= i_suffix:
+                    suffix = i_suffix + 1
+
+            name = "{0}.{1}".format(name, suffix)
+            data = (name, file_name, duration)
+            cursor += 1
+
+        self.store.insert(cursor, data)
+        self.treeview.set_cursor(cursor)
 
     def on_delete_clicked(self, widget):
         print 'on_delete_clicked'
@@ -191,6 +226,17 @@ class MissionsDialog(gtk.Dialog):
 
     def on_apply_clicked(self, widget):
         print 'on_apply_clicked'
+
+    @property
+    def store(self):
+        return self.treeview.get_model()
+
+    @property
+    def current_cursor(self):
+        cursor = self.treeview.get_cursor()[0]
+        if cursor is not None:
+            (cursor, ) = cursor
+        return cursor
 
 
 class MainWindow(gtk.Window):
