@@ -11,9 +11,9 @@ from minic.util import ugettext_lazy as _
 LOG = tx_logging.getLogger('ui')
 
 
-def show_message(message, message_type, window=None):
+def show_message(message, message_type, parent=None):
     md = gtk.MessageDialog(
-        window,
+        parent,
         gtk.DIALOG_DESTROY_WITH_PARENT,
         message_type,
         gtk.BUTTONS_CLOSE,
@@ -22,29 +22,43 @@ def show_message(message, message_type, window=None):
     md.destroy()
 
 
-def show_error(message, window=None):
-    show_message(message, gtk.MESSAGE_ERROR, window)
+def show_error(message, parent=None):
+    show_message(message, gtk.MESSAGE_ERROR, parent)
 
 
-class SettingsWindow(object):
+class SettingsDialog(gtk.Dialog):
 
-    def __init__(self):
-        root = gtk.Builder()
-        root.add_from_file(ui_path('settings'))
+    def __init__(self, parent):
+        super(SettingsDialog, self).__init__(
+            title=_("Settings"),
+            parent=parent,
+            flags=gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+            buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL))
 
-        self.window = root.get_object('window')
-        self.window.set_size_request(350, 70)
+        b_apply = self.add_button(gtk.STOCK_APPLY, gtk.RESPONSE_APPLY)
+        b_apply.connect('clicked', self.on_b_apply_clicked)
 
-        self.server_path = root.get_object('server_path')
+        icon = self.render_icon(gtk.STOCK_PREFERENCES, gtk.ICON_SIZE_MENU)
+        self.set_icon(icon)
+        self.set_default_size(350, 70)
+
+        self._build_components()
+        self._load_data()
+        self.show_all()
+
+    def _build_components(self):
+        table = gtk.Table(rows=1, columns=2, homogeneous=False)
+        table.set_col_spacings(10)
+        self.vbox.pack_start(table, True, True, 0)
+
+        # Server path row ------------------------------------------------------
+        label = gtk.Label(_("Server executable"))
+        self.server_path = gtk.FileChooserButton(
+            _("Select IL-2 FB DS executable"))
         self._add_filter_for_path_selector()
 
-        signals = {
-            'on_b_apply_clicked': self.on_b_apply_clicked,
-            'on_b_cancel_clicked': self.on_b_cancel_clicked,
-        }
-        root.connect_signals(signals)
-
-        self._load_data()
+        table.attach(label, 0, 1, 0, 1, gtk.FILL)
+        table.attach(self.server_path, 1, 2, 0, 1)
 
     def _add_filter_for_path_selector(self):
         f_filter = gtk.FileFilter()
@@ -57,19 +71,9 @@ class SettingsWindow(object):
         if p:
             self.server_path.set_filename(p)
 
-    def _save_data(self):
+    def on_b_apply_clicked(self, widget):
         user_settings.server_path = self.server_path.get_filename()
         user_settings.sync()
-
-    def show(self):
-        self.window.show()
-
-    def on_b_apply_clicked(self, widget):
-        self._save_data()
-        self.window.destroy()
-
-    def on_b_cancel_clicked(self, widget):
-        self.window.destroy()
 
 
 class MainWindow(gtk.Window):
@@ -160,7 +164,7 @@ class MainWindow(gtk.Window):
 
         # Settings -------------------------------------------------------------
         m_settings = gtk.MenuItem(_("Settings"))
-        m_settings.connect('button-press-event', self.on_menu_settings_click)
+        m_settings.connect('activate', self.on_menu_settings_activate)
         m_bar.append(m_settings)
 
         # Quit -----------------------------------------------------------------
@@ -170,11 +174,10 @@ class MainWindow(gtk.Window):
 
         return m_bar
 
-    def on_menu_settings_click(self, widget, event):
-        # Intercept only left mouse button
-        if event.button != 1:
-            return False
-        SettingsWindow().show()
+    def on_menu_settings_activate(self, widget):
+        d = SettingsDialog(self)
+        d.run()
+        d.destroy()
 
     def on_quit(self, *args):
         return self.stop_root().addBoth(lambda unused: gtk.main_quit())
