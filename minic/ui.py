@@ -102,6 +102,7 @@ class MissionsDialog(gtk.Dialog):
     def _build_treeview(self):
         store = gtk.ListStore(str, str, int)
         self.treeview = gtk.TreeView(model=store)
+        self.treeview.connect('cursor-changed', self.on_treeview_cursor_changed)
 
         # Name column ----------------------------------------------------------
         renderer = gtk.CellRendererText()
@@ -177,6 +178,8 @@ class MissionsDialog(gtk.Dialog):
             data = (_("Some mission"), None, 60)
             cursor = 0
         else:
+            # TODO: do not allow existing empty cells
+
             # Copy existing row
             cursor = self.current_cursor
             selected_name, file_name, duration = self.store[cursor]
@@ -208,9 +211,23 @@ class MissionsDialog(gtk.Dialog):
 
         self.store.insert(cursor, data)
         self.treeview.set_cursor(cursor)
+        self._on_data_changed()
 
     def on_delete_clicked(self, widget):
-        print 'on_delete_clicked'
+        cursor = self.current_cursor
+        if cursor is None:
+            return
+
+        del self.store[cursor]
+
+        length = len(self.store)
+        if length:
+            if cursor < length:
+                self.treeview.set_cursor(cursor)
+            else:
+                self.treeview.set_cursor(length - 1)
+
+        self._on_data_changed()
 
     def on_move_to_top(self, widget):
         print 'on_move_to_top'
@@ -226,6 +243,12 @@ class MissionsDialog(gtk.Dialog):
 
     def on_apply_clicked(self, widget):
         print 'on_apply_clicked'
+
+    def on_treeview_cursor_changed(self, widget):
+        print 'on_treeview_cursor_changed'
+
+    def _on_data_changed(self):
+        print '_on_data_changed'
 
     @property
     def store(self):
