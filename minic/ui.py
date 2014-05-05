@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 import gtk
+import os
 import tx_logging
 
-from minic.resources import image_path, ui_path
+from minic.resources import image_path
 from minic.service import root_service
 from minic.settings import user_settings
 from minic.util import ugettext_lazy as _
@@ -59,7 +60,7 @@ class SettingsDialog(gtk.Dialog):
 
     def _add_filter_for_path_selector(self):
         f_filter = gtk.FileFilter()
-        f_filter.set_name("IL-2 FB DS")
+        f_filter.set_name("il2server.exe")
         f_filter.add_pattern("il2server.exe")
         self.server_path.add_filter(f_filter)
 
@@ -85,7 +86,7 @@ class MissionsDialog(gtk.Dialog):
         b_apply = self.add_button(gtk.STOCK_APPLY, gtk.RESPONSE_APPLY)
         b_apply.connect('clicked', self.on_apply_clicked)
 
-        self.set_default_size(500, 300)
+        self.set_default_size(700, 400)
         self._build_components()
         self._load_data()
         self.show_all()
@@ -104,10 +105,19 @@ class MissionsDialog(gtk.Dialog):
         store = gtk.ListStore(str, str, int)
         self.treeview = gtk.TreeView(model=store)
         self.treeview.connect('cursor-changed', self.on_treeview_cursor_changed)
+        self.treeview.connect('button-press-event', self.on_treeview_button_press_event)
 
         # Name column ----------------------------------------------------------
+        def on_name_edited(cell, path, new_value):
+            if not new_value:
+                show_error(_("Duration value cannot be empty"), self)
+            else:
+                # TODO: fix dublicats
+                self.store[path][0] = new_value
+
         renderer = gtk.CellRendererText()
         renderer.set_property('editable', True)
+        renderer.connect('edited', on_name_edited)
         column = gtk.TreeViewColumn(_("Name"), renderer, text=0)
         column.set_sizing(gtk.TREE_VIEW_COLUMN_AUTOSIZE)
         column.set_resizable(True)
@@ -115,17 +125,36 @@ class MissionsDialog(gtk.Dialog):
         self.treeview.append_column(column)
 
         # File column ----------------------------------------------------------
+        def file_name_renderer(treeviewcolumn, cell, model, iter):
+            value = model.get_value(iter, 1)
+            if not value:
+                value = _("Not selected")
+            cell.set_property('text', value)
+
         renderer = gtk.CellRendererText()
-        renderer.set_property('editable', True)
         column = gtk.TreeViewColumn(_("File"), renderer, text=1)
         column.set_sizing(gtk.TREE_VIEW_COLUMN_AUTOSIZE)
         column.set_resizable(True)
         column.set_expand(True)
+        column.set_cell_data_func(renderer, file_name_renderer)
         self.treeview.append_column(column)
+        self.column_file_name = column
 
         # Duration column ------------------------------------------------------
+        def on_duration_edited(cell, path, new_value):
+            if not new_value:
+                show_error(_("Duration value cannot be empty"), self)
+                return
+            try:
+                value = int(new_value)
+            except ValueError:
+                show_error(_("Duration value must be an integer"), self)
+            else:
+                self.store[path][2] = value
+
         renderer = gtk.CellRendererText()
         renderer.set_property('editable', True)
+        renderer.connect('edited', on_duration_edited)
         column = gtk.TreeViewColumn(_("Duration (min)"), renderer, text=2)
         self.treeview.append_column(column)
 
@@ -184,8 +213,6 @@ class MissionsDialog(gtk.Dialog):
             data = (_("Some mission"), None, 60)
             cursor = 0
         else:
-            # TODO: do not allow existing empty cells
-
             # Copy existing row
             cursor = self.current_cursor
             selected_name, file_name, duration = self.store[cursor]
@@ -293,6 +320,51 @@ class MissionsDialog(gtk.Dialog):
                                          self.b_move_to_bottom,
                                          self.b_move_down)
 
+    def on_treeview_button_press_event(self, treeview, event):
+        if not event.button == 1:
+            return
+
+        info = treeview.get_path_at_pos(int(event.x), int(event.y))
+        if info is None:
+            return
+        path, column, cell_x, cell_y = info
+
+        if column == self.column_file_name:
+            if not user_settings.server_path:
+                show_error(_("Please, set path to game server"), self)
+                return
+
+            file_name = self.store[path][1]
+            root_dir = os.path.join(os.path.dirname(user_settings.server_path),
+                                    'Missions')
+            chooser = gtk.FileChooserDialog(title=_("Select IL-2 FB mission"),
+                                            action=gtk.FILE_CHOOSER_ACTION_OPEN,
+                                            buttons=(gtk.STOCK_CANCEL,
+                                                     gtk.RESPONSE_CANCEL,
+                                                     gtk.STOCK_OPEN,
+                                                     gtk.RESPONSE_OK))
+            if file_name:
+                chooser.set_filename(root_dir + file_name)
+            else:
+                chooser.set_current_folder(root_dir)
+
+            f_filter = gtk.FileFilter()
+            f_filter.set_name("IL-2 FB missions (*.mis)")
+            f_filter.add_pattern("*.mis")
+            chooser.add_filter(f_filter)
+
+            response = chooser.run()
+            if response == gtk.RESPONSE_OK:
+                file_name = chooser.get_filename()
+                if not file_name.startswith(root_dir):
+                    show_error(_("Please, select missions only for the server "
+                                 "you specified in settings"), self)
+                else:
+                    file_name = file_name[len(root_dir):]
+                    self.store[path][1] = file_name
+
+            chooser.destroy()
+
     def _on_data_changed(self):
         flag = len(self.store) > 0
         self._set_controls_sensitive(flag, self.b_delete)
@@ -306,6 +378,7 @@ class MissionsDialog(gtk.Dialog):
         map(lambda x: x.set_sensitive(value), widgets)
 
     def on_apply_clicked(self, widget):
+        # TODO: validate file names
         self._save_data()
 
     def _load_data(self):
