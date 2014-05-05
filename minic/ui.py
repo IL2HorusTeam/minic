@@ -235,16 +235,41 @@ class MissionsDialog(gtk.Dialog):
                 self.treeview.set_cursor(total - 1)
 
     def on_move_to_top(self, widget):
-        print 'on_move_to_top'
+        store = self.store
+        cursor = self.current_cursor
+        row = store[cursor]
+        data = (row[0], row[1], row[2], )
+
+        del store[cursor]
+        store.prepend(data)
+        self.treeview.set_cursor(0)
 
     def on_move_up(self, widget):
-        print 'on_move_up'
+        self._move_current_row(delta=-1)
 
     def on_move_down(self, widget):
-        print 'on_move_down'
+        self._move_current_row(delta=1)
+
+    def _move_current_row(self, delta):
+        store = self.store
+        cursor = self.current_cursor
+        row = store[cursor]
+        data = (row[0], row[1], row[2], )
+
+        del store[cursor]
+        cursor += delta
+        store.insert(cursor, data)
+        self.treeview.set_cursor(cursor)
 
     def on_move_to_bottom(self, widget):
-        print 'on_move_to_bottom'
+        store = self.store
+        cursor = self.current_cursor
+        row = store[cursor]
+        data = (row[0], row[1], row[2], )
+
+        del store[cursor]
+        store.append(data)
+        self.treeview.set_cursor(len(store) - 1)
 
     def on_treeview_cursor_changed(self, widget):
         cursor = self.current_cursor
