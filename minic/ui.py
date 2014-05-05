@@ -87,6 +87,7 @@ class MissionsDialog(gtk.Dialog):
 
         self.set_default_size(500, 300)
         self._build_components()
+        self._load_data()
         self.show_all()
 
     def _build_components(self):
@@ -147,6 +148,7 @@ class MissionsDialog(gtk.Dialog):
         button.set_tooltip_text(_("Delete selected mission from list"))
         button.connect('clicked', self.on_delete_clicked)
         vbox.pack_start(button, False, False, 0)
+        self.b_delete = button
 
         vbox.pack_start(gtk.HSeparator(), False, False, 0)
 
@@ -154,21 +156,25 @@ class MissionsDialog(gtk.Dialog):
         button.set_tooltip_text(_("Move selected mission to top"))
         button.connect('clicked', self.on_move_to_top)
         vbox.pack_start(button, False, False, 0)
+        self.b_move_to_top = button
 
         button = gtk.Button(stock=gtk.STOCK_GO_UP)
         button.set_tooltip_text(_("Move selected mission up"))
         button.connect('clicked', self.on_move_up)
         vbox.pack_start(button, False, False, 0)
+        self.b_move_up = button
 
         button = gtk.Button(stock=gtk.STOCK_GO_DOWN)
         button.set_tooltip_text(_("Move selected mission down"))
         button.connect('clicked', self.on_move_down)
         vbox.pack_start(button, False, False, 0)
+        self.b_move_down = button
 
         button = gtk.Button(stock=gtk.STOCK_GOTO_BOTTOM)
         button.set_tooltip_text(_("Move selected mission to bottom"))
         button.connect('clicked', self.on_move_to_bottom)
         vbox.pack_start(button, False, False, 0)
+        self.b_move_to_bottom = button
 
         return vbox
 
@@ -210,8 +216,8 @@ class MissionsDialog(gtk.Dialog):
             cursor += 1
 
         self.store.insert(cursor, data)
-        self.treeview.set_cursor(cursor)
         self._on_data_changed()
+        self.treeview.set_cursor(cursor)
 
     def on_delete_clicked(self, widget):
         cursor = self.current_cursor
@@ -219,15 +225,14 @@ class MissionsDialog(gtk.Dialog):
             return
 
         del self.store[cursor]
+        self._on_data_changed()
 
-        length = len(self.store)
-        if length:
-            if cursor < length:
+        total = len(self.store)
+        if total:
+            if cursor < total - 1:
                 self.treeview.set_cursor(cursor)
             else:
-                self.treeview.set_cursor(length - 1)
-
-        self._on_data_changed()
+                self.treeview.set_cursor(total - 1)
 
     def on_move_to_top(self, widget):
         print 'on_move_to_top'
@@ -241,14 +246,50 @@ class MissionsDialog(gtk.Dialog):
     def on_move_to_bottom(self, widget):
         print 'on_move_to_bottom'
 
-    def on_apply_clicked(self, widget):
-        print 'on_apply_clicked'
-
     def on_treeview_cursor_changed(self, widget):
-        print 'on_treeview_cursor_changed'
+        cursor = self.current_cursor
+        total = len(self.store)
+        if cursor is None:
+            self._set_controls_sensitive(False,
+                                         self.b_delete, self.b_move_to_top,
+                                         self.b_move_up, self.b_move_down,
+                                         self.b_move_to_bottom)
+        elif total <= 1:
+            self._set_controls_sensitive(False,
+                                         self.b_move_to_top, self.b_move_up,
+                                         self.b_move_down,
+                                         self.b_move_to_bottom)
+        else:
+            flag = cursor > 0
+            self._set_controls_sensitive(flag,
+                                         self.b_move_to_top, self.b_move_up)
+            flag = cursor < total - 1
+            self._set_controls_sensitive(flag,
+                                         self.b_move_to_bottom,
+                                         self.b_move_down)
 
     def _on_data_changed(self):
-        print '_on_data_changed'
+        flag = len(self.store) > 0
+        self._set_controls_sensitive(flag, self.b_delete)
+        if not flag:
+            self._set_controls_sensitive(False,
+                                         self.b_move_to_top, self.b_move_up,
+                                         self.b_move_down,
+                                         self.b_move_to_bottom)
+
+    def _set_controls_sensitive(self, value, *widgets):
+        map(lambda x: x.set_sensitive(value), widgets)
+
+    def on_apply_clicked(self, widget):
+        self._save_data()
+
+    def _load_data(self):
+        # TODO:
+        self._on_data_changed()
+
+    def _save_data(self):
+        # TODO:
+        pass
 
     @property
     def store(self):
