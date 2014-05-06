@@ -83,8 +83,9 @@ class MissionsDialog(gtk.Dialog):
             flags=gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
             buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL))
 
-        b_apply = self.add_button(gtk.STOCK_APPLY, gtk.RESPONSE_APPLY)
+        b_apply = gtk.Button(stock=gtk.STOCK_APPLY)
         b_apply.connect('clicked', self.on_apply_clicked)
+        self.action_area.add(b_apply)
 
         self.set_default_size(700, 400)
         self._build_components()
@@ -354,16 +355,16 @@ class MissionsDialog(gtk.Dialog):
             chooser.add_filter(f_filter)
 
             response = chooser.run()
+            file_name = chooser.get_filename()
+            chooser.destroy()
+
             if response == gtk.RESPONSE_OK:
-                file_name = chooser.get_filename()
                 if not file_name.startswith(root_dir):
                     show_error(_("Please, select missions only for the server "
                                  "you specified in settings"), self)
                 else:
                     file_name = file_name[len(root_dir):]
                     self.store[path][1] = file_name
-
-            chooser.destroy()
 
     def _on_data_changed(self):
         flag = len(self.store) > 0
@@ -378,8 +379,17 @@ class MissionsDialog(gtk.Dialog):
         map(lambda x: x.set_sensitive(value), widgets)
 
     def on_apply_clicked(self, widget):
-        # TODO: validate file names
-        self._save_data()
+        names = []
+        for row in self.store:
+            if row[1] is None:
+                names.append(row[0])
+        if names:
+            message = _("Please, select files for next missions: {0}.").format(
+                        ', '.join(names))
+            show_error(message, self)
+        else:
+            self._save_data()
+            self.response(gtk.RESPONSE_APPLY)
 
     def _load_data(self):
         # TODO:
