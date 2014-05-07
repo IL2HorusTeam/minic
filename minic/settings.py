@@ -145,3 +145,44 @@ class ServerSettings(dict):
                                  self.__class__.__name__, name))
 
 server_settings = ServerSettings()
+
+
+class missions(object):
+
+    @classmethod
+    def _get_settings(cls):
+        value = user_settings.missions
+        if value is None:
+            value = {
+                'list': [],
+                'current_index': None,
+            }
+            user_settings.missions = value
+        return value
+
+    @classmethod
+    def load(cls):
+        return cls._get_settings()['list']
+
+    @classmethod
+    def save(cls, iterable):
+        cls._get_settings()['list'] = [
+            {
+                'name': i[0],
+                'file_name': i[1],
+                'duration': i[2],
+            } for i in iterable
+        ]
+        user_settings.sync()
+
+    @classmethod
+    def names(cls):
+        return [m['name'] for m in missions.load()]
+
+    @classmethod
+    def get_current_index(cls):
+        return cls._get_settings()['current_index']
+
+    @classmethod
+    def set_current_index(cls, value):
+        cls._get_settings()['current_index'] = value

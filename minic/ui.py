@@ -5,7 +5,7 @@ import tx_logging
 
 from minic.resources import image_path
 from minic.service import root_service
-from minic.settings import user_settings
+from minic.settings import user_settings, missions
 from minic.util import ugettext_lazy as _
 
 
@@ -105,8 +105,10 @@ class MissionsDialog(gtk.Dialog):
     def _build_treeview(self):
         store = gtk.ListStore(str, str, int)
         self.treeview = gtk.TreeView(model=store)
-        self.treeview.connect('cursor-changed', self.on_treeview_cursor_changed)
-        self.treeview.connect('button-press-event', self.on_treeview_button_press_event)
+        self.treeview.connect('cursor-changed',
+                              self.on_treeview_cursor_changed)
+        self.treeview.connect('button-press-event',
+                              self.on_treeview_button_press_event)
 
         # Name column ----------------------------------------------------------
         def on_name_edited(cell, path, new_value):
@@ -392,12 +394,14 @@ class MissionsDialog(gtk.Dialog):
             self.response(gtk.RESPONSE_APPLY)
 
     def _load_data(self):
-        # TODO:
+        store = self.store
+        store.clear()
+        for m in missions.load():
+            store.append((m['name'], m['file_name'], m['duration'], ))
         self._on_data_changed()
 
     def _save_data(self):
-        # TODO:
-        pass
+        missions.save(self.store)
 
     @property
     def store(self):
