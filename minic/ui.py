@@ -76,6 +76,12 @@ class SettingsDialog(gtk.Dialog):
 
 class MissionsDialog(gtk.Dialog):
 
+    class COLUMNS(object):
+        ID = 0
+        NAME = 1
+        FILE_NAME = 2
+        DURATION = 3
+
     def __init__(self, parent):
         super(MissionsDialog, self).__init__(
             title=_("Missions"),
@@ -103,39 +109,47 @@ class MissionsDialog(gtk.Dialog):
         self.vbox.pack_start(hbox, True, True, 0)
 
     def _build_treeview(self):
-        store = gtk.ListStore(str, str, int)
+        store = gtk.ListStore(int, str, str, int)
         self.treeview = gtk.TreeView(model=store)
         self.treeview.connect('cursor-changed',
                               self.on_treeview_cursor_changed)
         self.treeview.connect('button-press-event',
                               self.on_treeview_button_press_event)
 
+        # ID column ------------------------------------------------------------
+        renderer = gtk.CellRendererText()
+        column = gtk.TreeViewColumn(None, renderer,
+                                    text=MissionsDialog.COLUMNS.ID)
+        column.set_visible(False)
+        self.treeview.append_column(column)
+
         # Name column ----------------------------------------------------------
         def on_name_edited(cell, path, new_value):
             if not new_value:
-                show_error(_("Duration value cannot be empty"), self)
+                show_error(_("Name value cannot be empty"), self)
             else:
-                # TODO: fix dublicats
-                self.store[path][0] = new_value
+                self.store[path][MissionsDialog.COLUMNS.NAME] = new_value
 
         renderer = gtk.CellRendererText()
         renderer.set_property('editable', True)
         renderer.connect('edited', on_name_edited)
-        column = gtk.TreeViewColumn(_("Name"), renderer, text=0)
+        column = gtk.TreeViewColumn(_("Name"), renderer,
+                                    text=MissionsDialog.COLUMNS.NAME)
         column.set_sizing(gtk.TREE_VIEW_COLUMN_AUTOSIZE)
         column.set_resizable(True)
         column.set_expand(True)
         self.treeview.append_column(column)
 
         # File column ----------------------------------------------------------
-        def file_name_renderer(treeviewcolumn, cell, model, iter):
-            value = model.get_value(iter, 1)
+        def file_name_renderer(treeviewcolumn, cell, model, iterator):
+            value = model.get_value(iterator, MissionsDialog.COLUMNS.FILE_NAME)
             if not value:
                 value = _("Not selected")
             cell.set_property('text', value)
 
         renderer = gtk.CellRendererText()
-        column = gtk.TreeViewColumn(_("File"), renderer, text=1)
+        column = gtk.TreeViewColumn(_("File"), renderer,
+                                    text=MissionsDialog.COLUMNS.FILE_NAME)
         column.set_sizing(gtk.TREE_VIEW_COLUMN_AUTOSIZE)
         column.set_resizable(True)
         column.set_expand(True)
@@ -153,12 +167,13 @@ class MissionsDialog(gtk.Dialog):
             except ValueError:
                 show_error(_("Duration value must be an integer"), self)
             else:
-                self.store[path][2] = value
+                self.store[path][MissionsDialog.COLUMNS.DURATION] = value
 
         renderer = gtk.CellRendererText()
         renderer.set_property('editable', True)
         renderer.connect('edited', on_duration_edited)
-        column = gtk.TreeViewColumn(_("Duration (min)"), renderer, text=2)
+        column = gtk.TreeViewColumn(_("Duration (min)"), renderer,
+                                    text=MissionsDialog.COLUMNS.DURATION)
         self.treeview.append_column(column)
 
         # Build scrolled window ------------------------------------------------
@@ -211,14 +226,18 @@ class MissionsDialog(gtk.Dialog):
         return vbox
 
     def on_new_clicked(self, widget):
+        new_id = missions.generate_id()
+
         if len(self.store) == 0:
             # Create default row
-            data = (_("Some mission"), None, 60)
             cursor = 0
+            name = _("Some mission")
+            file_name = None
+            duration = 60
         else:
             # Copy existing row
             cursor = self.current_cursor
-            selected_name, file_name, duration = self.store[cursor]
+            id_, selected_name, file_name, duration = self.store[cursor]
 
             def split_name(name):
                 chunks = name.rsplit('.', 1)
@@ -235,17 +254,16 @@ class MissionsDialog(gtk.Dialog):
             for i, row in enumerate(self.store):
                 if i == cursor:
                     continue
-                i_name, i_suffix = split_name(name=row[0])
+                i_name, i_suffix = split_name(name=row[MissionsDialog.COLUMNS.NAME])
                 if i_name != name or not i_suffix:
                     continue
                 if suffix <= i_suffix:
                     suffix = i_suffix + 1
 
             name = "{0}.{1}".format(name, suffix)
-            data = (name, file_name, duration)
             cursor += 1
 
-        self.store.insert(cursor, data)
+        self.store.insert(cursor, (new_id, name, file_name, duration))
         self._on_data_changed()
         self.treeview.set_cursor(cursor)
 
@@ -268,7 +286,7 @@ class MissionsDialog(gtk.Dialog):
         store = self.store
         cursor = self.current_cursor
         row = store[cursor]
-        data = (row[0], row[1], row[2], )
+        data = (row[0], row[1], row[2], row[3], )
 
         del store[cursor]
         store.prepend(data)
@@ -284,7 +302,7 @@ class MissionsDialog(gtk.Dialog):
         store = self.store
         cursor = self.current_cursor
         row = store[cursor]
-        data = (row[0], row[1], row[2], )
+        data = (row[0], row[1], row[2], row[3], )
 
         del store[cursor]
         cursor += delta
@@ -295,7 +313,7 @@ class MissionsDialog(gtk.Dialog):
         store = self.store
         cursor = self.current_cursor
         row = store[cursor]
-        data = (row[0], row[1], row[2], )
+        data = (row[0], row[1], row[2], row[3], )
 
         del store[cursor]
         store.append(data)
@@ -337,7 +355,7 @@ class MissionsDialog(gtk.Dialog):
                 show_error(_("Please, set path to game server"), self)
                 return
 
-            file_name = self.store[path][1]
+            file_name = self.store[path][MissionsDialog.COLUMNS.FILE_NAME]
             root_dir = os.path.join(os.path.dirname(user_settings.server_path),
                                     'Missions')
             chooser = gtk.FileChooserDialog(title=_("Select IL-2 FB mission"),
@@ -360,13 +378,15 @@ class MissionsDialog(gtk.Dialog):
             file_name = chooser.get_filename()
             chooser.destroy()
 
-            if response == gtk.RESPONSE_OK:
-                if not file_name.startswith(root_dir):
-                    show_error(_("Please, select missions only for the server "
-                                 "you specified in settings"), self)
-                else:
-                    file_name = file_name[len(root_dir):]
-                    self.store[path][1] = file_name
+            if response != gtk.RESPONSE_OK:
+                return
+
+            if not file_name.startswith(root_dir):
+                show_error(_("Please, select missions only for the server "
+                             "you specified in settings"), self)
+            else:
+                file_name = file_name[len(root_dir):]
+                self.store[path][MissionsDialog.COLUMNS.FILE_NAME] = file_name
 
     def _on_data_changed(self):
         flag = len(self.store) > 0
@@ -383,8 +403,8 @@ class MissionsDialog(gtk.Dialog):
     def on_apply_clicked(self, widget):
         names = []
         for row in self.store:
-            if row[1] is None:
-                names.append(row[0])
+            if row[MissionsDialog.COLUMNS.FILE_NAME] is None:
+                names.append(row[MissionsDialog.COLUMNS.NAME])
         if names:
             message = _("Please, select files for next missions: {0}.").format(
                         ', '.join(names))
@@ -397,7 +417,7 @@ class MissionsDialog(gtk.Dialog):
         store = self.store
         store.clear()
         for m in missions.load():
-            store.append((m['name'], m['file_name'], m['duration'], ))
+            store.append((m['id'], m['name'], m['file_name'], m['duration'], ))
         self._on_data_changed()
 
     def _save_data(self):

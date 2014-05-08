@@ -109,9 +109,11 @@ class ServerSettings(dict):
         self['dl_port'] = int(self._get_value('DeviceLink', 'port', 10000))
 
         # Server name
-        self['name'] = self._get_value('NET', 'serverName').decode('unicode-escape')
+        self['name'] = self._get_value(
+            'NET', 'serverName').decode('unicode-escape')
         # Server description
-        self['description'] = self._get_value('NET', 'serverDescription').decode('unicode-escape')
+        self['description'] = self._get_value(
+            'NET', 'serverDescription').decode('unicode-escape')
 
     def _get_log_path(self):
         value = self._get_value('game', 'eventlog')
@@ -144,10 +146,13 @@ class ServerSettings(dict):
             raise AttributeError("'{0}' object has no attribute '{1}'".format(
                                  self.__class__.__name__, name))
 
+
 server_settings = ServerSettings()
 
 
 class missions(object):
+
+    _id_generator = None
 
     @classmethod
     def _get_settings(cls):
@@ -155,7 +160,7 @@ class missions(object):
         if value is None:
             value = {
                 'list': [],
-                'current_index': None,
+                'current_id': None,
             }
             user_settings.missions = value
         return value
@@ -168,21 +173,35 @@ class missions(object):
     def save(cls, iterable):
         cls._get_settings()['list'] = [
             {
-                'name': i[0],
-                'file_name': i[1],
-                'duration': i[2],
+                'id': i[0],
+                'name': i[1],
+                'file_name': i[2],
+                'duration': i[3],
             } for i in iterable
         ]
         user_settings.sync()
 
     @classmethod
     def names(cls):
-        return [m['name'] for m in missions.load()]
+        return [m['name'] for m in cls.load()]
 
     @classmethod
-    def get_current_index(cls):
-        return cls._get_settings()['current_index']
+    def get_current_id(cls):
+        return cls._get_settings()['current_id']
 
     @classmethod
-    def set_current_index(cls, value):
-        cls._get_settings()['current_index'] = value
+    def set_current_id(cls, value):
+        cls._get_settings()['current_id'] = value
+
+    @classmethod
+    def generate_id(cls):
+        if cls._id_generator is None:
+
+            def id_generator():
+                number = max([m['id'] for m in cls.load()] or [0, ])
+                while True:
+                    number += 1
+                    yield number
+
+            cls._id_generator = id_generator()
+        return next(cls._id_generator)
