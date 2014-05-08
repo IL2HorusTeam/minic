@@ -639,6 +639,7 @@ class MainWindow(gtk.Window):
         # display only 2nd column of data model:
         mission_selector.add_attribute(cell, 'text', 1)
         mission_selector.set_tooltip_text(_("Current mission"))
+        mission_selector.connect('changed', self.on_mission_selector_changed)
         self.mission_selector = mission_selector
 
         button = to_button(gtk.STOCK_EDIT)
@@ -739,10 +740,18 @@ class MainWindow(gtk.Window):
 
         if len(store) and new_index == -1:
             new_index = 0
-        if len(store) and missions.get_current_id() is None:
-            missions.set_current_id(store[new_index][0])
+        # if len(store) and missions.get_current_id() is None:
+        #
 
         self.mission_selector.set_active(new_index)
+
+    def on_mission_selector_changed(self, widget):
+        store = widget.get_model()
+        index = widget.get_active()
+        if index == -1:
+            missions.set_current_id(None)
+        else:
+            missions.set_current_id(store[index][0])
 
     def on_connection_done(self, *args):
         self.connection_stack.set_current_page(
