@@ -109,7 +109,7 @@ class MissionsDialog(gtk.Dialog):
         self.vbox.pack_start(hbox, True, True, 0)
 
     def _build_treeview(self):
-        store = gtk.ListStore(int, str, str, int)
+        store = gtk.ListStore(long, str, str, int)
         self.treeview = gtk.TreeView(model=store)
         self.treeview.connect('cursor-changed',
                               self.on_treeview_cursor_changed)
@@ -629,10 +629,17 @@ class MainWindow(gtk.Window):
         table = gtk.Table(rows=4, columns=2, homogeneous=False)
         table.set_col_spacings(10)
 
-        # Name row -------------------------------------------------------------
+        # Current mission row --------------------------------------------------
         label = to_label(_("Current"))
-        mission_selector = gtk.combo_box_new_text()
+
+        store = gtk.ListStore(long, str)
+        mission_selector = gtk.ComboBox(store)
+        cell = gtk.CellRendererText()
+        mission_selector.pack_start(cell)
+        # display only 2nd column of data model:
+        mission_selector.add_attribute(cell, 'text', 1)
         mission_selector.set_tooltip_text(_("Current mission"))
+        self.mission_selector = mission_selector
 
         button = to_button(gtk.STOCK_EDIT)
         button.set_tooltip_text(_("Edit missions list"))
@@ -703,13 +710,39 @@ class MainWindow(gtk.Window):
         frame = gtk.Frame(label=_("Mission"))
         frame.add(alignment)
 
+        self._update_missions_box()
+
         return frame
 
     def on_edit_missions_clicked(self, widget):
         d = MissionsDialog(self)
         result = d.run()
-        # TODO:
+        if result == gtk.RESPONSE_APPLY:
+            self._update_missions_box()
         d.destroy()
+
+    def _update_missions_box(self):
+        store = self.mission_selector.get_model()
+
+        current_index = self.mission_selector.get_active()
+        current_id = missions.get_current_id() if current_index == -1 else \
+                     store[current_index][0]
+
+        store.clear()
+        new_index = -1
+
+        for i, m in enumerate(missions.load()):
+            id_ = m['id']
+            store.append((id_, m['name'], ))
+            if current_id is not None and current_id == id_:
+                new_index = i
+
+        if len(store) and new_index == -1:
+            new_index = 0
+        if len(store) and missions.get_current_id() is None:
+            missions.set_current_id(store[new_index][0])
+
+        self.mission_selector.set_active(new_index)
 
     def on_connection_done(self, *args):
         self.connection_stack.set_current_page(

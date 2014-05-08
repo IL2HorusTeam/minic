@@ -167,7 +167,7 @@ class missions(object):
 
     @classmethod
     def load(cls):
-        return cls._get_settings()['list']
+        return cls._get_settings().setdefault('list', [])
 
     @classmethod
     def save(cls, iterable):
@@ -182,16 +182,13 @@ class missions(object):
         user_settings.sync()
 
     @classmethod
-    def names(cls):
-        return [m['name'] for m in cls.load()]
-
-    @classmethod
     def get_current_id(cls):
-        return cls._get_settings()['current_id']
+        return cls._get_settings().setdefault('current_id', None)
 
     @classmethod
     def set_current_id(cls, value):
         cls._get_settings()['current_id'] = value
+        user_settings.sync()
 
     @classmethod
     def generate_id(cls):

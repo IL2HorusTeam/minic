@@ -98,7 +98,8 @@ def main():
 
 if __name__ == "__main__":
     try:
-        with PidLock():
-            main()
+        pid_lock = PidLock()
     except Exception as e:
         show_error(e)
+    with pid_lock:
+        main()
