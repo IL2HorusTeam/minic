@@ -645,6 +645,7 @@ class MainWindow(gtk.Window):
         button = to_button(gtk.STOCK_EDIT)
         button.set_tooltip_text(_("Edit missions list"))
         button.connect('clicked', self.on_edit_missions_clicked)
+        self.b_mission_list_edit = button
 
         hbox = gtk.HBox(False, 2)
         hbox.pack_start(mission_selector, True, True, 0)
@@ -678,30 +679,37 @@ class MainWindow(gtk.Window):
         button = to_button(gtk.STOCK_GOTO_FIRST)
         button.set_tooltip_text(_("First mission"))
         hbox.pack_start(button, False, False, 0)
+        self.b_mission_first = button
 
         button = to_button(gtk.STOCK_MEDIA_PREVIOUS)
         button.set_tooltip_text(_("Previous mission"))
         hbox.pack_start(button, False, False, 0)
+        self.b_mission_prev = button
 
         button = to_button(gtk.STOCK_MEDIA_STOP)
         button.set_tooltip_text(_("Stop mission"))
         hbox.pack_start(button, False, False, 0)
+        self.b_mission_stop = button
 
         button = to_button(gtk.STOCK_MEDIA_PLAY)
         button.set_tooltip_text(_("Run mission"))
         hbox.pack_start(button, False, False, 0)
+        self.b_mission_run = button
 
         button = to_button(gtk.STOCK_REFRESH)
         button.set_tooltip_text(_("Restart mission"))
         hbox.pack_start(button, False, False, 0)
+        self.b_mission_restart = button
 
         button = to_button(gtk.STOCK_MEDIA_NEXT)
         button.set_tooltip_text(_("Next mission"))
         hbox.pack_start(button, False, False, 0)
+        self.b_mission_next = button
 
         button = to_button(gtk.STOCK_GOTO_LAST)
         button.set_tooltip_text(_("Last mission"))
         hbox.pack_start(button, False, False, 0)
+        self.b_mission_last = button
 
         # Build frame ----------------------------------------------------------
         alignment = gtk.Alignment(0.5, 0.5, 1.0, 1.0)
@@ -711,6 +719,7 @@ class MainWindow(gtk.Window):
         frame = gtk.Frame(label=_("Mission"))
         frame.add(alignment)
 
+        self._mission_changed_not_by_user = False
         self._update_missions_box()
 
         return frame
@@ -740,18 +749,65 @@ class MainWindow(gtk.Window):
 
         if len(store) and new_index == -1:
             new_index = 0
-        # if len(store) and missions.get_current_id() is None:
-        #
 
+        self._mission_changed_not_by_user = True
         self.mission_selector.set_active(new_index)
 
     def on_mission_selector_changed(self, widget):
         store = widget.get_model()
         index = widget.get_active()
-        if index == -1:
-            missions.set_current_id(None)
+
+        old_id = missions.get_current_id()
+        new_id = None if index == -1 else store[index][0]
+
+        if new_id != old_id:
+            missions.set_current_id(new_id)
+
+            is_running = False
+
+            if self._mission_changed_not_by_user is False and is_running:
+                # TODO:
+                # then run new mission
+                pass
+
+        self._update_mission_flow_buttons()
+        self._mission_changed_not_by_user = False
+
+    def _lock_mission_controls(self):
+        self.mission_selector.set_sensitive(False)
+        self.b_mission_list_edit.set_sensitive(False)
+        self._disable_mission_flow_buttons()
+
+    def _unlock_mission_controls(self):
+        self.mission_selector.set_sensitive(True)
+        self.b_mission_list_edit.set_sensitive(True)
+        self._update_mission_flow_buttons()
+
+    def _update_mission_flow_buttons(self):
+        total = len(self.mission_selector.get_model())
+
+        if total:
+            index = self.mission_selector.get_active()
+            is_running = False
+
+            self.b_mission_first.set_sensitive(index > 0)
+            self.b_mission_prev.set_sensitive(True)
+            self.b_mission_stop.set_sensitive(is_running)
+            self.b_mission_run.set_sensitive(not is_running)
+            self.b_mission_restart.set_sensitive(is_running)
+            self.b_mission_next.set_sensitive(True)
+            self.b_mission_last.set_sensitive(index < total - 1)
         else:
-            missions.set_current_id(store[index][0])
+            self._disable_mission_flow_buttons()
+
+    def _disable_mission_flow_buttons(self):
+        self.b_mission_first.set_sensitive(False)
+        self.b_mission_prev.set_sensitive(False)
+        self.b_mission_stop.set_sensitive(False)
+        self.b_mission_run.set_sensitive(False)
+        self.b_mission_restart.set_sensitive(False)
+        self.b_mission_next.set_sensitive(False)
+        self.b_mission_last.set_sensitive(False)
 
     def on_connection_done(self, *args):
         self.connection_stack.set_current_page(
