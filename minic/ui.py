@@ -771,6 +771,7 @@ class MainWindow(gtk.Window):
         if new_id != old_id:
             missions.set_current_id(new_id)
 
+            # TODO:
             is_running = False
 
             if self._mission_changed_not_by_user is False and is_running:
@@ -796,12 +797,15 @@ class MainWindow(gtk.Window):
 
         if total:
             index = self.mission_selector.get_active()
+
+            # TODO:
             is_running = False
 
             self.b_mission_first.set_sensitive(index > 0)
             self.b_mission_prev.set_sensitive(True)
             self.b_mission_stop.set_sensitive(is_running)
-            self.b_mission_run.set_sensitive(not is_running)
+            self.b_mission_run.set_sensitive(root_service.is_connected and
+                                             not is_running)
             self.b_mission_restart.set_sensitive(is_running)
             self.b_mission_next.set_sensitive(True)
             self.b_mission_last.set_sensitive(index < total - 1)
@@ -820,6 +824,8 @@ class MainWindow(gtk.Window):
     def on_connection_done(self, *args):
         self.connection_stack.set_current_page(
             MainWindow.CONNECTION_TABS.CONNECTED)
+        self._update_mission_flow_buttons()
+        # TODO:
 
     def on_connection_closed(self, *args):
         self.connection_stack.set_current_page(
@@ -832,7 +838,8 @@ class MainWindow(gtk.Window):
         self._on_disconnected()
 
     def _on_disconnected(self):
-        pass
+        self._update_mission_flow_buttons()
+        # TODO:
 
     def on_b_mission_first_clicked(self, widget):
         self.mission_selector.set_active(0)

@@ -14,7 +14,6 @@ from twisted.application.service import MultiService, Service
 from twisted.internet import defer
 
 from minic.settings import server_settings, CONSOLE_TIMEOUT, DEVICE_LINK_TIMEOUT
-from minic.util import ugettext_lazy as _
 
 
 LOG = tx_logging.getLogger(__name__)
@@ -165,7 +164,8 @@ class RootService(Service):
             d.addCallback(self.cb_connection_done)
 
         # On connection lost ---------------------------------------------------
-        d = self.client_factory.on_connection_lost.addErrback(self.on_connection_lost)
+        d = self.client_factory.on_connection_lost.addCallbacks(
+            self.on_connection_closed, self.on_connection_lost)
 
         if self.cb_connection_closed:
             d.addCallback(self.cb_connection_closed)
@@ -178,7 +178,11 @@ class RootService(Service):
         established. Main work starts from here.
         """
         self.cl_client = client
+
         self.commander.startService()
+
+    def on_connection_closed(self, unused):
+        self.cl_client = None
 
     @defer.inlineCallbacks
     def on_connection_lost(self, reason):
@@ -190,6 +194,10 @@ class RootService(Service):
         self._update_connection_callbacks()
         yield self.commander.stopService()
         defer.returnValue(reason)
+
+    @property
+    def is_connected(self):
+        return self.cl_client is not None
 
 
 root_service = RootService()
