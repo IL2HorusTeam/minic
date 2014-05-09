@@ -669,47 +669,55 @@ class MainWindow(gtk.Window):
         table.attach(label, 1, 2, 2, 3)
 
         # Controls row ---------------------------------------------------------
+        button = to_button(gtk.STOCK_GOTO_FIRST)
+        button.set_tooltip_text(_("First mission"))
+        button.connect('clicked', self.on_b_mission_first_clicked)
+        self.b_mission_first = button
+
+        button = to_button(gtk.STOCK_MEDIA_PREVIOUS)
+        button.set_tooltip_text(_("Previous mission"))
+        button.connect('clicked', self.on_b_mission_prev_clicked)
+        self.b_mission_prev = button
+
+        button = to_button(gtk.STOCK_MEDIA_STOP)
+        button.set_tooltip_text(_("Stop mission"))
+        button.connect('clicked', self.on_b_mission_stop_clicked)
+        self.b_mission_stop = button
+
+        button = to_button(gtk.STOCK_MEDIA_PLAY)
+        button.set_tooltip_text(_("Run mission"))
+        button.connect('clicked', self.on_b_mission_run_clicked)
+        self.b_mission_run = button
+
+        button = to_button(gtk.STOCK_REFRESH)
+        button.set_tooltip_text(_("Restart mission"))
+        button.connect('clicked', self.on_b_mission_restart_clicked)
+        self.b_mission_restart = button
+
+        button = to_button(gtk.STOCK_MEDIA_NEXT)
+        button.set_tooltip_text(_("Next mission"))
+        button.connect('clicked', self.on_b_mission_next_clicked)
+        self.b_mission_next = button
+
+        button = to_button(gtk.STOCK_GOTO_LAST)
+        button.set_tooltip_text(_("Last mission"))
+        button.connect('clicked', self.on_b_mission_last_clicked)
+        self.b_mission_last = button
+
         hbox = gtk.HBox(False, 7)
+        hbox.pack_start(self.b_mission_first, False, False, 0)
+        hbox.pack_start(self.b_mission_prev, False, False, 0)
+        hbox.pack_start(self.b_mission_stop, False, False, 0)
+        hbox.pack_start(self.b_mission_run, False, False, 0)
+        hbox.pack_start(self.b_mission_restart, False, False, 0)
+        hbox.pack_start(self.b_mission_next, False, False, 0)
+        hbox.pack_start(self.b_mission_last, False, False, 0)
+
         alignment = gtk.Alignment(0.5, 0.5, 1.0, 1.0)
         alignment.set_padding(5, 0, 0, 0)
         alignment.add(hbox)
 
         table.attach(alignment, 0, 2, 3, 4)
-
-        button = to_button(gtk.STOCK_GOTO_FIRST)
-        button.set_tooltip_text(_("First mission"))
-        hbox.pack_start(button, False, False, 0)
-        self.b_mission_first = button
-
-        button = to_button(gtk.STOCK_MEDIA_PREVIOUS)
-        button.set_tooltip_text(_("Previous mission"))
-        hbox.pack_start(button, False, False, 0)
-        self.b_mission_prev = button
-
-        button = to_button(gtk.STOCK_MEDIA_STOP)
-        button.set_tooltip_text(_("Stop mission"))
-        hbox.pack_start(button, False, False, 0)
-        self.b_mission_stop = button
-
-        button = to_button(gtk.STOCK_MEDIA_PLAY)
-        button.set_tooltip_text(_("Run mission"))
-        hbox.pack_start(button, False, False, 0)
-        self.b_mission_run = button
-
-        button = to_button(gtk.STOCK_REFRESH)
-        button.set_tooltip_text(_("Restart mission"))
-        hbox.pack_start(button, False, False, 0)
-        self.b_mission_restart = button
-
-        button = to_button(gtk.STOCK_MEDIA_NEXT)
-        button.set_tooltip_text(_("Next mission"))
-        hbox.pack_start(button, False, False, 0)
-        self.b_mission_next = button
-
-        button = to_button(gtk.STOCK_GOTO_LAST)
-        button.set_tooltip_text(_("Last mission"))
-        hbox.pack_start(button, False, False, 0)
-        self.b_mission_last = button
 
         # Build frame ----------------------------------------------------------
         alignment = gtk.Alignment(0.5, 0.5, 1.0, 1.0)
@@ -825,3 +833,36 @@ class MainWindow(gtk.Window):
 
     def _on_disconnected(self):
         pass
+
+    def on_b_mission_first_clicked(self, widget):
+        self.mission_selector.set_active(0)
+
+    def on_b_mission_prev_clicked(self, widget):
+        index = self.mission_selector.get_active()
+        if index == 0:
+            index = len(self.mission_selector.get_model()) - 1
+        else:
+            index -= 1
+        self.mission_selector.set_active(index)
+
+    def on_b_mission_stop_clicked(self, widget):
+        print 'on_b_mission_stop_clicked'
+
+    def on_b_mission_run_clicked(self, widget):
+        print 'on_b_mission_run_clicked'
+
+    def on_b_mission_restart_clicked(self, widget):
+        print 'on_b_mission_restart_clicked'
+
+    def on_b_mission_next_clicked(self, widget):
+        index = self.mission_selector.get_active()
+        max_index = len(self.mission_selector.get_model()) - 1
+        if index == max_index:
+            index = 0
+        else:
+            index += 1
+        self.mission_selector.set_active(index)
+
+    def on_b_mission_last_clicked(self, widget):
+        index = len(self.mission_selector.get_model()) - 1
+        self.mission_selector.set_active(index)
