@@ -30,6 +30,10 @@ class ClientServiceMixin(BaseClientServiceMixin):
     def dl_client(self):
         return self.parent.dl_client
 
+    @property
+    def connection_was_lost(self):
+        return self.parent.connection_was_lost
+
 
 class CommanderService(MultiService, ClientServiceMixin):
 
@@ -84,6 +88,7 @@ class RootService(Service):
 
     dl_client = None
     cl_client = None
+    connection_was_lost = False
 
     def __init__(self):
         self.cl_connector = None
@@ -193,6 +198,7 @@ class RootService(Service):
 
     def on_connection_closed(self, unused):
         self.cl_client = None
+        self.connection_was_lost = False
 
     @defer.inlineCallbacks
     def on_connection_lost(self, reason):
@@ -201,6 +207,7 @@ class RootService(Service):
         lost. Stop every work and clean up resources.
         """
         self.cl_client = None
+        self.connection_was_lost = True
         self._update_connection_callbacks()
         yield self.commander.stopService()
         defer.returnValue(reason)

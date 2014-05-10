@@ -25,8 +25,7 @@ from minic.util import ugettext_lazy as _
 class PidLock(object):
 
     def __init__(self):
-        self.pidpath = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), 'minic.pid')
+        self.pidpath = os.path.join(USER_FILES_ROOT, 'minic.pid')
         if not os.path.exists(self.pidpath):
             return
         with open(self.pidpath, 'r') as f:

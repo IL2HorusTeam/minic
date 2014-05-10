@@ -25,6 +25,7 @@ class MissionsService(DefaultMissionsService, ClientServiceMixin):
     """
 
     def __init__(self, log_watcher=None):
+        self.mission_was_running = False
         self.mission_info = None
         self.state = MISSION_STATE.STOPPED
         self.time_left = 0
@@ -49,17 +50,29 @@ class MissionsService(DefaultMissionsService, ClientServiceMixin):
         self._timer.start(interval=1, now=False)
         self._set_state(MISSION_STATE.RUNNING)
 
+        self.cl_client.chat_all(unicode(_("Mission '{0}' is running.").format(
+                                        self.mission_info['name'])))
+        self.cl_client.chat_all(unicode(self.time_left_verbose_str))
+
     @ClientServiceMixin.radar_refresher
     def ended(self, info=None):
         DefaultMissionsService.ended(self, info)
-        self._on_ended()
+        if self.mission_info:
+            self.cl_client.chat_all(
+                unicode(_("Mission '{0}' was stopped.").format(
+                        self.mission_info['name'])))
+            self._on_ended()
 
     def startService(self):
         DefaultMissionsService.startService(self)
-        return self.cl_client.mission_destroy()
+        d = self.cl_client.mission_destroy()
+        if self.connection_was_lost and self.mission_was_running:
+            d.addCallback(lambda unused: self.mission_run())
+        return d
 
     @defer.inlineCallbacks
     def stopService(self):
+        self.mission_was_running = self.is_mission_running
         yield DefaultMissionsService.stopService(self)
         self._on_ended()
 
@@ -71,60 +84,68 @@ class MissionsService(DefaultMissionsService, ClientServiceMixin):
         self.time_left = 0
         self._set_state(MISSION_STATE.STOPPED)
 
-    ############################################################################
-    # TODO: if connection lost? if connection established again?
-    ############################################################################
-
     @defer.inlineCallbacks
     def mission_run(self):
         self._set_state(MISSION_STATE.STARTING)
-
-        mission_info = missions.get_current_mission()
-
+        mission_info = missions.get_current_mission().copy()
         if mission_info is None:
             LOG.error("Failed to run mission: current mission is not set")
             self._set_state(MISSION_STATE.STOPPED)
             defer.returnValue(None)
 
-        file_name = mission_info['file_name']
-
+        name = mission_info['name']
+        self.cl_client.chat_all(
+            unicode(_("Loading mission '{0}'...").format(name)))
         try:
-            yield self.cl_client.mission_load(file_name)
+            yield self.cl_client.mission_load(mission_info['file_name'])
         except Exception as e:
             LOG.error("Failed to load mission '{0}': {1}".format(
-                      file_name, unicode(e)))
+                      name, unicode(e)))
+            self.cl_client.chat_all(unicode(_("Failed to load mission.")))
             self._set_state(MISSION_STATE.STOPPED)
             defer.returnValue(None)
 
         self.mission_info = mission_info
-
+        self.cl_client.chat_all(
+            unicode(_("Loading mission '{0}'...").format(name)))
         try:
             yield self.cl_client.mission_begin()
         except Exception as e:
             LOG.error("Failed to begin mission '{0}': {1}".format(
-                      file_name, unicode(e)))
+                      name, unicode(e)))
+            self.cl_client.chat_all(unicode(_("Failed to start mission.")))
             self.mission_info = None
             self._set_state(MISSION_STATE.STOPPED)
 
     def mission_stop(self):
         self._set_state(MISSION_STATE.STOPPING)
+        self.cl_client.chat_all(unicode(_("Stopping mission...")))
         return self.cl_client.mission_destroy()
 
+    @defer.inlineCallbacks
     def mission_restart(self):
-        self._set_state(MISSION_STATE.RESTARTING)
-        # TODO:
+        self.cl_client.chat_all(unicode(_("Restarting mission...")))
+        yield self.mission_stop()
+        yield self.mission_run()
 
-    def mission_update_current(self):
-        print 'mission_update_current'
-        # TODO:
+    def current_was_changed(self):
+        self.mission_restart()
 
     def _timer_tick(self):
         self.time_left -= 1
-
-        # TODO:
-
         if self.on_timer_tick:
             self.on_timer_tick()
+
+        if self.time_left == 0:
+            current_index = missions.get_index_by_id(self.mission_info['id'])
+
+            def on_stopped(unused):
+                new_index = (current_index + 1) % missions.count()
+                new_id = missions.get_id_by_index(new_index)
+                missions.set_current_id(new_id)
+                return self.mission_run()
+
+            self.mission_stop().addCallback(on_stopped)
 
     def _set_state(self, state):
         self.state = state
@@ -138,3 +159,7 @@ class MissionsService(DefaultMissionsService, ClientServiceMixin):
     @property
     def time_left_str(self):
         return time.strftime('%H:%M:%S', time.gmtime(self.time_left))
+
+    @property
+    def time_left_verbose_str(self):
+        return _("Time left: {0}").format(self.time_left_str)

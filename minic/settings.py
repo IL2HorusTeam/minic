@@ -216,3 +216,19 @@ class missions(object):
             for m in cls.load():
                 if m['id'] == current_id:
                     return m
+
+    @classmethod
+    def get_index_by_id(cls, mission_id):
+        index = -1
+        for i, m in enumerate(cls.load()):
+            if m['id'] == mission_id:
+                index = i
+                break
+        return index
+
+    @classmethod
+    def get_id_by_index(cls, index):
+        try:
+            return cls.load()[index]['id']
+        except ValueError:
+            return None

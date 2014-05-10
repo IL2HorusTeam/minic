@@ -783,7 +783,7 @@ class MainWindow(gtk.Window):
                 self._mission_changed_not_by_user is False
                 and root_service.commander.services.missions.is_mission_running
             ):
-                root_service.commander.services.missions.mission_update_current()
+                root_service.commander.services.missions.current_was_changed()
 
         self._update_mission_flow_buttons()
         self._mission_changed_not_by_user = False
@@ -870,13 +870,8 @@ class MainWindow(gtk.Window):
     def on_mission_state_changed(self, state):
         # Update current mission on UI
         current_id = missions.get_current_id()
+        new_index = missions.get_index_by_id(current_id)
         old_index = self.mission_selector.get_active()
-
-        new_index = -1
-        for i, row in enumerate(self.mission_selector.get_model()):
-            if row[0] == current_id:
-                new_index = i
-                break
 
         if new_index != old_index:
             self._mission_changed_not_by_user = True
@@ -887,9 +882,7 @@ class MainWindow(gtk.Window):
         self._display_mission_time_left()
 
         # Update state of mission flow controls
-        if state in [MISSION_STATE.STARTING,
-                     MISSION_STATE.RESTARTING,
-                     MISSION_STATE.STOPPING]:
+        if state in [MISSION_STATE.STARTING, MISSION_STATE.STOPPING]:
             self._lock_mission_controls()
         else:
             self._unlock_mission_controls()
