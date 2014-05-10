@@ -46,6 +46,9 @@ class MissionsService(DefaultMissionsService, ClientServiceMixin):
     @ClientServiceMixin.radar_refresher
     def began(self, info=None):
         DefaultMissionsService.began(self, info)
+        if self.mission_info is None:
+            return
+
         self.time_left = self.mission_info['duration'] * 60
         self._timer.start(interval=1, now=False)
         self._set_state(MISSION_STATE.RUNNING)
@@ -57,11 +60,11 @@ class MissionsService(DefaultMissionsService, ClientServiceMixin):
     @ClientServiceMixin.radar_refresher
     def ended(self, info=None):
         DefaultMissionsService.ended(self, info)
-        if self.mission_info:
-            self.cl_client.chat_all(
-                unicode(_("Mission '{0}' was stopped.").format(
-                        self.mission_info['name'])))
-            self._on_ended()
+        if self.mission_info is None:
+            return
+        self.cl_client.chat_all(unicode(
+            _("Mission '{0}' was stopped.").format(self.mission_info['name'])))
+        self._on_ended()
 
     def startService(self):
         DefaultMissionsService.startService(self)
@@ -107,7 +110,7 @@ class MissionsService(DefaultMissionsService, ClientServiceMixin):
 
         self.mission_info = mission_info
         self.cl_client.chat_all(
-            unicode(_("Loading mission '{0}'...").format(name)))
+            unicode(_("Starting mission '{0}'...").format(name)))
         try:
             yield self.cl_client.mission_begin()
         except Exception as e:
