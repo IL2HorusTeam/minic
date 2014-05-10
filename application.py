@@ -6,7 +6,6 @@ pygtk.require('2.0')
 from twisted.internet import gtk2reactor
 gtk2reactor.install()
 
-import gtk
 import logging
 import sys
 import os
@@ -75,11 +74,6 @@ def setup_logging():
 
 def main():
     try:
-        check_dirs()
-    except RuntimeError as e:
-        show_error(e)
-        return
-    try:
         setup_logging()
     except Exception as e:
         show_error(_("Failed to setup logging: {0}").format(unicode(e)))
@@ -90,12 +84,16 @@ def main():
         show_error(_("Failed load user settings: {0}").format(unicode(e)))
         return
 
-    gtk.settings_get_default().props.gtk_button_images = True
     MainWindow()
     reactor.run()
 
 
 if __name__ == "__main__":
+    try:
+        check_dirs()
+    except RuntimeError as e:
+        show_error(e)
+        sys.exit()
     try:
         pid_lock = PidLock()
     except Exception as e:

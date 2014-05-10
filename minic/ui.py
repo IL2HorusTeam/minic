@@ -767,8 +767,11 @@ class MainWindow(gtk.Window):
         if len(store) and new_index == -1:
             new_index = 0
 
-        self._mission_changed_not_by_user = True
-        self.mission_selector.set_active(new_index)
+        if new_index == -1:
+            self._update_mission_flow_buttons()
+        else:
+            self._mission_changed_not_by_user = True
+            self.mission_selector.set_active(new_index)
 
     def on_mission_selector_changed(self, widget):
         store = widget.get_model()
