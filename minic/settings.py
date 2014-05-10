@@ -28,6 +28,8 @@ LOG_SETTINGS = {
 CONSOLE_TIMEOUT = 1.0
 DEVICE_LINK_TIMEOUT = 1.0
 
+# TODO: add version
+
 
 class UserSettings(object):
 
@@ -182,6 +184,10 @@ class missions(object):
         user_settings.sync()
 
     @classmethod
+    def count(cls):
+        return len(cls.load())
+
+    @classmethod
     def get_current_id(cls):
         return cls._get_settings().setdefault('current_id', None)
 
@@ -202,3 +208,11 @@ class missions(object):
 
             cls._id_generator = id_generator()
         return next(cls._id_generator)
+
+    @classmethod
+    def get_current_mission(cls):
+        current_id = cls.get_current_id()
+        if current_id is not None:
+            for m in cls.load():
+                if m['id'] == current_id:
+                    return m

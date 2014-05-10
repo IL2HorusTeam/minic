@@ -3,6 +3,7 @@ import gtk
 import os
 import tx_logging
 
+from minic.constants import MISSION_STATE
 from minic.resources import image_path
 from minic.service import root_service
 from minic.settings import user_settings, missions
@@ -465,9 +466,6 @@ class MainWindow(gtk.Window):
         vbox.pack_start(missions_frame, expand=False, fill=True, padding=0)
         self.add(vbox)
 
-        root_service.set_callbacks(self.on_connection_done,
-                                   self.on_connection_closed,
-                                   self.on_connection_lost)
         self.connect('delete-event', lambda w, e: w.hide() or True)
         self.show_all()
 
@@ -587,6 +585,11 @@ class MainWindow(gtk.Window):
         frame = gtk.Frame(label=_("Server connection"))
         frame.add(alignment)
 
+        root_service.register_callbacks(
+            self.on_connection_done,
+            self.on_connection_closed,
+            self.on_connection_lost)
+
         return frame
 
     def on_connect_clicked(self, widget):
@@ -658,15 +661,15 @@ class MainWindow(gtk.Window):
         label = to_label(_("State"))
         table.attach(label, 0, 1, 1, 2, gtk.FILL)
 
-        label = to_label("MISSION STATE")
-        table.attach(label, 1, 2, 1, 2)
+        self.lb_mission_state = to_label("MISSION STATE")
+        table.attach(self.lb_mission_state, 1, 2, 1, 2)
 
         # Time left row --------------------------------------------------------
         label = to_label(_("Time left"))
         table.attach(label, 0, 1, 2, 3, gtk.FILL)
 
-        label = to_label("TIME LEFT")
-        table.attach(label, 1, 2, 2, 3)
+        self.lb_mission_time_left = to_label("TIME LEFT")
+        table.attach(self.lb_mission_time_left, 1, 2, 2, 3)
 
         # Controls row ---------------------------------------------------------
         button = to_button(gtk.STOCK_GOTO_FIRST)
@@ -681,17 +684,17 @@ class MainWindow(gtk.Window):
 
         button = to_button(gtk.STOCK_MEDIA_STOP)
         button.set_tooltip_text(_("Stop mission"))
-        button.connect('clicked', self.on_b_mission_stop_clicked)
+        button.connect('clicked', lambda *args: root_service.commander.services.missions.mission_stop())
         self.b_mission_stop = button
 
         button = to_button(gtk.STOCK_MEDIA_PLAY)
         button.set_tooltip_text(_("Run mission"))
-        button.connect('clicked', self.on_b_mission_run_clicked)
+        button.connect('clicked', lambda *args: root_service.commander.services.missions.mission_run())
         self.b_mission_run = button
 
         button = to_button(gtk.STOCK_REFRESH)
         button.set_tooltip_text(_("Restart mission"))
-        button.connect('clicked', self.on_b_mission_restart_clicked)
+        button.connect('clicked', lambda *args: root_service.commander.services.missions.mission_restart())
         self.b_mission_restart = button
 
         button = to_button(gtk.STOCK_MEDIA_NEXT)
@@ -729,6 +732,12 @@ class MainWindow(gtk.Window):
 
         self._mission_changed_not_by_user = False
         self._update_missions_box()
+        self._display_mission_state()
+        self._display_mission_time_left()
+
+        root_service.commander.services.missions.register_callbacks(
+            self.on_mission_state_changed,
+            self.on_mission_timer_tick)
 
         return frame
 
@@ -770,14 +779,11 @@ class MainWindow(gtk.Window):
 
         if new_id != old_id:
             missions.set_current_id(new_id)
-
-            # TODO:
-            is_running = False
-
-            if self._mission_changed_not_by_user is False and is_running:
-                # TODO:
-                # then run new mission
-                pass
+            if (
+                self._mission_changed_not_by_user is False
+                and root_service.commander.services.missions.is_mission_running
+            ):
+                root_service.commander.services.missions.mission_update_current()
 
         self._update_mission_flow_buttons()
         self._mission_changed_not_by_user = False
@@ -797,15 +803,13 @@ class MainWindow(gtk.Window):
 
         if total:
             index = self.mission_selector.get_active()
-
-            # TODO:
-            is_running = False
+            is_running = root_service.commander.services.missions.is_mission_running
 
             self.b_mission_first.set_sensitive(index > 0)
             self.b_mission_prev.set_sensitive(True)
             self.b_mission_stop.set_sensitive(is_running)
-            self.b_mission_run.set_sensitive(root_service.is_connected and
-                                             not is_running)
+            self.b_mission_run.set_sensitive(
+                root_service.is_connected and not is_running)
             self.b_mission_restart.set_sensitive(is_running)
             self.b_mission_next.set_sensitive(True)
             self.b_mission_last.set_sensitive(index < total - 1)
@@ -825,7 +829,6 @@ class MainWindow(gtk.Window):
         self.connection_stack.set_current_page(
             MainWindow.CONNECTION_TABS.CONNECTED)
         self._update_mission_flow_buttons()
-        # TODO:
 
     def on_connection_closed(self, *args):
         self.connection_stack.set_current_page(
@@ -839,7 +842,6 @@ class MainWindow(gtk.Window):
 
     def _on_disconnected(self):
         self._update_mission_flow_buttons()
-        # TODO:
 
     def on_b_mission_first_clicked(self, widget):
         self.mission_selector.set_active(0)
@@ -851,15 +853,6 @@ class MainWindow(gtk.Window):
         else:
             index -= 1
         self.mission_selector.set_active(index)
-
-    def on_b_mission_stop_clicked(self, widget):
-        print 'on_b_mission_stop_clicked'
-
-    def on_b_mission_run_clicked(self, widget):
-        print 'on_b_mission_run_clicked'
-
-    def on_b_mission_restart_clicked(self, widget):
-        print 'on_b_mission_restart_clicked'
 
     def on_b_mission_next_clicked(self, widget):
         index = self.mission_selector.get_active()
@@ -873,3 +866,43 @@ class MainWindow(gtk.Window):
     def on_b_mission_last_clicked(self, widget):
         index = len(self.mission_selector.get_model()) - 1
         self.mission_selector.set_active(index)
+
+    def on_mission_state_changed(self, state):
+        # Update current mission on UI
+        current_id = missions.get_current_id()
+        old_index = self.mission_selector.get_active()
+
+        new_index = -1
+        for i, row in enumerate(self.mission_selector.get_model()):
+            if row[0] == current_id:
+                new_index = i
+                break
+
+        if new_index != old_index:
+            self._mission_changed_not_by_user = True
+            self.mission_selector.set_active(new_index)
+
+        # Update mission info
+        self._display_mission_state()
+        self._display_mission_time_left()
+
+        # Update state of mission flow controls
+        if state in [MISSION_STATE.STARTING,
+                     MISSION_STATE.RESTARTING,
+                     MISSION_STATE.STOPPING]:
+            self._lock_mission_controls()
+        else:
+            self._unlock_mission_controls()
+
+    def on_mission_timer_tick(self):
+        self._display_mission_time_left()
+
+    def _display_mission_state(self):
+        state = root_service.commander.services.missions.state
+        self.lb_mission_state.set_text(unicode(state.verbose_name))
+        self.lb_mission_state.modify_fg(gtk.STATE_NORMAL,
+                                        gtk.gdk.color_parse(state.value))
+
+    def _display_mission_time_left(self):
+        self.lb_mission_time_left.set_text(
+            root_service.commander.services.missions.time_left_str)

@@ -14,6 +14,7 @@ from twisted.application.service import MultiService, Service
 from twisted.internet import defer
 
 from minic.settings import server_settings, CONSOLE_TIMEOUT, DEVICE_LINK_TIMEOUT
+from minic.util import ugettext_lazy as _
 
 
 LOG = tx_logging.getLogger(__name__)
@@ -69,6 +70,14 @@ class CommanderService(MultiService, ClientServiceMixin):
     def startService(self):
         self.services.missions.log_watcher.log_path = server_settings.log_path
         MultiService.startService(self)
+        self.cl_client.chat_all(
+            _("Hello! Minicommander takes control over this server."))
+
+    @defer.inlineCallbacks
+    def stopService(self):
+        if self.parent.is_connected:
+            self.cl_client.chat_all(_("Minicommander quits. Good bye!"))
+        yield MultiService.stopService(self)
 
 
 class RootService(Service):
@@ -87,10 +96,10 @@ class RootService(Service):
         self.commander = CommanderService()
         self.commander.parent = self
 
-    def set_callbacks(self,
-                      connection_done=None,
-                      connection_closed=None,
-                      connection_lost=None):
+    def register_callbacks(self,
+                           connection_done=None,
+                           connection_closed=None,
+                           connection_lost=None):
         self.cb_connection_done = connection_done
         self.cb_connection_closed = connection_closed
         self.cb_connection_lost = connection_lost
@@ -149,6 +158,8 @@ class RootService(Service):
             self.client_factory.stopTrying()
             self.cl_connector.disconnect()
 
+        yield Service.stopService(self)
+
     def _update_connection_callbacks(self):
         """
         Update callbacks which are called after the connection with game
@@ -178,7 +189,6 @@ class RootService(Service):
         established. Main work starts from here.
         """
         self.cl_client = client
-
         self.commander.startService()
 
     def on_connection_closed(self, unused):
