@@ -1,0 +1,4 @@
+include README.rst
+include LICENSE
+include requirements.pip
+recursive-include minic/resources/images *
