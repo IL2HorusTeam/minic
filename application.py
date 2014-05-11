@@ -10,6 +10,9 @@ import logging
 import sys
 import os
 
+import minic
+minic.APP_ROOT = os.path.dirname(os.path.realpath(sys.argv[0]))
+
 from twisted.internet import reactor
 from twisted.python.logfile import LogFile
 
