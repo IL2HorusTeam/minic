@@ -13,10 +13,44 @@ assert os.path.exists(GTK_RUNTIME_DIR), "Cannot find GTK runtime data"
 
 GTK_THEME_DEFAULT = os.path.join("share", "themes", "Default")
 GTK_THEME_WINDOWS = os.path.join("share", "themes", "MS-Windows")
-GTK_ICONS = os.path.join("share", "icons")
-GTK_LOCALE_DATA = os.path.join("share", "locale")
 
-IMAGES_PATH = os.path.join('resources', 'images')
+GTK_ENGINE_DIR = os.path.join("lib", "gtk-2.0", "2.10.0", "engines")
+GTK_ENGINE_DLL = "libwimp.dll"
+
+GTK_LOCALE_DATA = os.path.join("share", "locale")
+GTK_EXTRA_LOCALES = ['ru', ]
+
+GTK_ICONS = os.path.join("share", "icons")
+
+APP_IMAGES_PATH = os.path.join('resources', 'images')
+
+
+def alias_subdir(root, subdir):
+    suffix_length = len(root) + 1
+    full_location = os.path.join(root, subdir)
+    result = []
+    for dirname, subdirs, filenames in os.walk(full_location):
+        if filenames:
+            result.append((
+                dirname[suffix_length:],
+                [os.path.join(dirname, filename) for filename in filenames],
+            ))
+    return result
+
+
+data_files = [
+    (APP_IMAGES_PATH, [
+        os.path.join(APP_IMAGES_PATH, 'logo.png'),
+        os.path.join(APP_IMAGES_PATH, 'show.png'),
+        os.path.join(APP_IMAGES_PATH, 'hide.png'),
+    ]),
+    (GTK_ENGINE_DIR, [
+        os.path.join(GTK_RUNTIME_DIR, GTK_ENGINE_DIR, GTK_ENGINE_DLL),
+    ]),
+]
+data_files.extend(alias_subdir(GTK_RUNTIME_DIR, GTK_THEME_DEFAULT))
+data_files.extend(alias_subdir(GTK_RUNTIME_DIR, GTK_THEME_WINDOWS))
+
 
 setup(
     name='minic',
@@ -35,16 +69,10 @@ setup(
     windows=[
         {
             'script': 'application.py',
-            'icon_resources': [(1, os.path.join(IMAGES_PATH, 'logo.ico'))],
+            'icon_resources': [(1, os.path.join(APP_IMAGES_PATH, 'logo.ico'))],
         },
     ],
-    data_files=[
-        (IMAGES_PATH, [
-            os.path.join(IMAGES_PATH, 'logo.png'),
-            os.path.join(IMAGES_PATH, 'show.png'),
-            os.path.join(IMAGES_PATH, 'hide.png'),
-        ])
-    ],
+    data_files=data_files,
     options={
         'py2exe': {
             'packages': [
