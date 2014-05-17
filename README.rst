@@ -43,10 +43,10 @@ Licence
 
 `GNU General Public License v2 (GPLv2)`_, free for non-commercial use.
 
-Contribute
-----------
+For developers
+--------------
 
-Please see `CONTRIBUTING`_.
+Please see `DEVELOPMENT`_.
 
 .. _GNU General Public License v2 (GPLv2): https://github.com/IL2HorusTeam/minic/blob/master/LICENSE
-.. _CONTRIBUTING: https://github.com/IL2HorusTeam/minic/blob/master/CONTRIBUTING.rst
+.. _CONTRIBUTING: https://github.com/IL2HorusTeam/minic/blob/master/DEVELOPMENT.rst
