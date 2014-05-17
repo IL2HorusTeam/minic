@@ -49,4 +49,4 @@ For developers
 Please see `DEVELOPMENT`_.
 
 .. _GNU General Public License v2 (GPLv2): https://github.com/IL2HorusTeam/minic/blob/master/LICENSE
-.. _CONTRIBUTING: https://github.com/IL2HorusTeam/minic/blob/master/DEVELOPMENT.rst
+.. _DEVELOPMENT: https://github.com/IL2HorusTeam/minic/blob/master/DEVELOPMENT.rst
