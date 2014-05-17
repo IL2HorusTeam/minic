@@ -7,8 +7,6 @@ Minicommander for IL-2 FB DS.
     :alt: Minic screenshots
     :align: center
 
---------------------------------------------------------------------------------
-
 Changelog
 ---------
 
