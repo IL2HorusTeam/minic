@@ -14,7 +14,9 @@ Changelog
 ^^^^^
 
 :Date: 10.05.2014
-:Download links: coming soon
+:Download links:
+    `Windows <https://drive.google.com/file/d/0B4hbTGD5PQqQYVJ6dWJ6NEVJQmM/edit?usp=sharing>`_,
+    `Linux/Mac <https://github.com/IL2HorusTeam/minic/archive/0.1.0.zip>`_
 
 Initial version. Includes:
 
@@ -28,13 +30,13 @@ Initial version. Includes:
 
 * Game flow control:
 
-  - go to first
-  - go to previous
-  - stop current
-  - start
-  - restart current
-  - go to next
-  - go to last
+  - go to first;
+  - go to previous;
+  - stop current;
+  - start;
+  - restart current;
+  - go to next;
+  - go to last;
 
 Licence
 -------

@@ -4,4 +4,4 @@ VERSION = (0, 1, 0, )
 
 
 def get_version():
-    return '.'.join(VERSION)
+    return '.'.join([str(x) for x in VERSION])
