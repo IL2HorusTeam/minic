@@ -7,38 +7,36 @@ Minicommander for IL-2 FB DS.
     :alt: Minic screenshots
     :align: center
 
-------
+--------------------------------------------------------------------------------
 
 Changelog
---------------------------
-
-.. *You can click a version name to see a diff with the previous one.*
+---------
 
 0.1.0
 ^^^^^
 
-  :Date: 10.05.2014
-  :Download links: Windows, Linux/Mac
+:Date: 10.05.2014
+:Download links: coming soon
 
-  Initial version. Includes:
+Initial version. Includes:
 
-  * Connecting to IL-2 FB server with reconnection support.
-  * Missions list definition and managing. Each mission has it's own:
+* Connecting to IL-2 FB server with reconnection support.
+* Missions list definition and managing. Each mission has it's own:
 
-    - order number;
-    - verbose name;
-    - path to file;
-    - duration in minutes;
+  - order number;
+  - verbose name;
+  - path to file;
+  - duration in minutes;
 
-  * Game flow control:
+* Game flow control:
 
-    - go to first
-    - go to previous
-    - stop current
-    - start
-    - restart current
-    - go to next
-    - go to last
+  - go to first
+  - go to previous
+  - stop current
+  - start
+  - restart current
+  - go to next
+  - go to last
 
 Licence
 -------
