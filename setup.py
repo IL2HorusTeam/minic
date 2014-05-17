@@ -51,10 +51,11 @@ data_files = [
 data_files.extend(alias_subdir(GTK_RUNTIME_DIR, GTK_THEME_DEFAULT))
 data_files.extend(alias_subdir(GTK_RUNTIME_DIR, GTK_THEME_WINDOWS))
 
+version = __import__('minic').get_version()
 
 setup(
     name='minic',
-    version='1.0.0',
+    version=version,
     description='Minicommander for IL-2 FB Dedicated Server',
     license='GPLv2',
     url='https://github.com/IL2HorusTeam/minic',
@@ -65,7 +66,7 @@ setup(
     ],
     packages=[
         'minic', 'minic.service',
-    ],    
+    ],
     windows=[
         {
             'script': 'application.py',
@@ -94,6 +95,7 @@ setup(
         'Development Status :: 4 - Beta',
         'Intended Audience :: End Users/Desktop',
         'License :: Free for non-commercial use',
+        'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
         'Natural Language :: English',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 2.7',
