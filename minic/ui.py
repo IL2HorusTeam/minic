@@ -449,18 +449,18 @@ class MainWindow(gtk.Window):
         super(MainWindow, self).__init__()
 
         self.set_title(self.title)
-        self.set_size_request(350, 200)
+        self.set_size_request(350, 215)
         self.set_position(gtk.WIN_POS_CENTER)
         self.set_icon_from_file(image_path(self.icon_name))
         self.build_tray_icon()
 
-        menu_bar = self.build_menu_bar()
+        tool_bar = self.build_tool_bar()
         connection_frame = self.build_connection_frame()
         missions_frame = self.build_missions_frame()
 
         # Build layout ---------------------------------------------------------
         vbox = gtk.VBox(False, 3)
-        vbox.pack_start(menu_bar, expand=False, fill=False, padding=0)
+        vbox.pack_start(tool_bar, expand=False, fill=False, padding=0)
         vbox.pack_start(connection_frame, expand=False, fill=True, padding=0)
         vbox.pack_start(missions_frame, expand=False, fill=True, padding=0)
         self.add(vbox)
@@ -515,22 +515,28 @@ class MainWindow(gtk.Window):
         menu.show_all()
         menu.popup(None, None, None, event_button, event_time)
 
-    def build_menu_bar(self):
-        m_bar = gtk.MenuBar()
+    def build_tool_bar(self):
+        toolbar = gtk.Toolbar()
 
         # Settings -------------------------------------------------------------
-        m_settings = gtk.MenuItem(_("Settings"))
-        m_settings.connect('activate', self.on_menu_settings_activate)
-        m_bar.append(m_settings)
+        settings = gtk.ToolButton(gtk.STOCK_PREFERENCES)
+        settings.connect("clicked", self.on_menu_settings_clicked)
+        toolbar.insert(settings, 0)
+
+        toolbar.insert(gtk.SeparatorToolItem(), 1)
+
+        # m_settings = gtk.MenuItem(_("Settings"))
+        # m_settings.connect('select', self.on_menu_settings_select)
+        # m_bar.append(m_settings)
 
         # Quit -----------------------------------------------------------------
-        m_quit = gtk.MenuItem(_("Quit"))
-        m_quit.connect('activate', self.on_quit)
-        m_bar.append(m_quit)
+        quit = gtk.ToolButton(gtk.STOCK_QUIT)
+        quit.connect("clicked", self.on_quit)
+        toolbar.insert(quit, 2)
 
-        return m_bar
+        return toolbar
 
-    def on_menu_settings_activate(self, widget):
+    def on_menu_settings_clicked(self, widget):
         d = SettingsDialog(self)
         d.run()
         d.destroy()

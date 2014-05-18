@@ -3,12 +3,12 @@ minic
 
 Minicommander for IL-2 FB DS.
 
-.. image:: http://i.imgur.com/UMx80uY.png
+.. image:: http://i.imgur.com/IceQg1U.png
     :alt: Minic screenshots
     :align: center
 
-Changelog
----------
+Releases
+--------
 
 0.1.0
 ^^^^^
