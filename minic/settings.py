@@ -101,7 +101,7 @@ class ServerSettings(dict):
         self['difficulty'] = int(self._get_value('NET', 'difficulty', 0))
 
         # Console host
-        self['cl_host'] = self._get_value('NET', 'localHost', '127.0.0.1')
+        self['cl_host'] = self._get_console_host()
         # Console port
         self['cl_port'] = int(self._get_value('Console', 'IP', 20000))
 
@@ -117,11 +117,26 @@ class ServerSettings(dict):
         self['description'] = self._get_value(
             'NET', 'serverDescription').decode('unicode-escape')
 
-    def _get_log_path(self):
-        value = self._get_value('game', 'eventlog')
+    def _get_console_host(self):
+        section = 'NET'
+        attr_name = 'localHost'
+        value = self._get_value(section, attr_name)
         if value is None:
             raise ValueError(
-                _("Events log path is not set in {0}").format(self.file_name))
+                _("Please, explicitly specify your local address as '{:}' "
+                  "attribute in '{:}' secton in '{:}' file.").format(
+                  attr_name, section, self.file_name))
+        return value
+
+    def _get_log_path(self):
+        section = 'game'
+        attr_name = 'eventlog'
+        value = self._get_value(section, attr_name)
+        if value is None:
+            raise ValueError(
+                _("Please, specify path to events log as '{:}' "
+                  "attribute in '{:}' secton in '{:}' file.").format(
+                  attr_name, section, self.file_name))
         return os.path.join(os.path.dirname(user_settings.server_path), value)
 
     def _get_value(self, section_name, attr_name, default=None):
