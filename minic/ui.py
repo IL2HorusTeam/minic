@@ -842,12 +842,12 @@ class MainWindow(gtk.Window):
             is_running = root_service.commander.services.missions.is_mission_running
 
             self.b_mission_first.set_sensitive(index > 0)
-            self.b_mission_prev.set_sensitive(True)
+            self.b_mission_prev.set_sensitive(total > 1)
             self.b_mission_stop.set_sensitive(is_running)
             self.b_mission_run.set_sensitive(
                 root_service.is_connected and not is_running)
             self.b_mission_restart.set_sensitive(is_running)
-            self.b_mission_next.set_sensitive(True)
+            self.b_mission_next.set_sensitive(total > 1)
             self.b_mission_last.set_sensitive(index < total - 1)
         else:
             self._disable_mission_flow_buttons()
