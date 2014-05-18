@@ -99,8 +99,10 @@ class MissionsService(DefaultMissionsService, ClientServiceMixin):
         name = mission_info['name']
         self.cl_client.chat_all(
             unicode(_("Loading mission '{0}'...").format(name)))
+        file_name = missions.full_relative_path(mission_info['file_name'])
+
         try:
-            yield self.cl_client.mission_load(mission_info['file_name'])
+            yield self.cl_client.mission_load(file_name)
         except Exception as e:
             LOG.error("Failed to load mission '{0}': {1}".format(
                       name, unicode(e)))

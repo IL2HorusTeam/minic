@@ -155,6 +155,7 @@ server_settings = ServerSettings()
 class missions(object):
 
     _id_generator = None
+    dogfight_subpath = os.path.join('Net', 'dogfight')  # case-sensitive
 
     @classmethod
     def _get_settings(cls):
@@ -232,3 +233,25 @@ class missions(object):
             return cls.load()[index]['id']
         except ValueError:
             return None
+
+    @classmethod
+    def get_root_path(cls):
+        return os.path.join(os.path.dirname(user_settings.server_path),
+                            'Missions',
+                            cls.dogfight_subpath)
+
+    @classmethod
+    def absolute_path(cls, short_relative_path):
+        return os.path.join(cls.get_root_path(), short_relative_path)
+
+    @classmethod
+    def short_relative_path(cls, absolute_path):
+        root_path = cls.get_root_path()
+        if absolute_path.startswith(root_path):
+            return absolute_path[len(root_path) + len(os.path.sep):]
+        raise ValueError(_("Missions must be placed within '{0}' directory.")
+                         .format(root_path))
+
+    @classmethod
+    def full_relative_path(cls, short_relative_path):
+        return os.path.join(cls.dogfight_subpath, short_relative_path)

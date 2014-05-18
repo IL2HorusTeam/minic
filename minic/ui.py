@@ -232,7 +232,7 @@ class MissionsDialog(gtk.Dialog):
         if len(self.store) == 0:
             # Create default row
             cursor = 0
-            name = _("Some mission")
+            name = _("New mission")
             file_name = None
             duration = 60
         else:
@@ -350,25 +350,25 @@ class MissionsDialog(gtk.Dialog):
         if info is None:
             return
         path, column, cell_x, cell_y = info
+        store = treeview.get_model()
 
         if column == self.column_file_name:
+
             if not user_settings.server_path:
                 show_error(_("Please, set path to game server"), self)
                 return
 
-            file_name = self.store[path][MissionsDialog.COLUMNS.FILE_NAME]
-            root_dir = os.path.join(os.path.dirname(user_settings.server_path),
-                                    'Missions')
+            file_name = store[path][MissionsDialog.COLUMNS.FILE_NAME]
             chooser = gtk.FileChooserDialog(title=_("Select IL-2 FB mission"),
                                             action=gtk.FILE_CHOOSER_ACTION_OPEN,
                                             buttons=(gtk.STOCK_CANCEL,
                                                      gtk.RESPONSE_CANCEL,
                                                      gtk.STOCK_OPEN,
                                                      gtk.RESPONSE_OK))
-            if file_name:
-                chooser.set_filename(root_dir + file_name)
+            if file_name is None:
+                chooser.set_current_folder(missions.get_root_path())
             else:
-                chooser.set_current_folder(root_dir)
+                chooser.set_filename(missions.absolute_path(file_name))
 
             f_filter = gtk.FileFilter()
             f_filter.set_name("IL-2 FB missions (*.mis)")
@@ -382,12 +382,12 @@ class MissionsDialog(gtk.Dialog):
             if response != gtk.RESPONSE_OK:
                 return
 
-            if not file_name.startswith(root_dir):
-                show_error(_("Please, select missions only for the server "
-                             "you specified in settings"), self)
+            try:
+                relative_path = missions.short_relative_path(file_name)
+            except ValueError as e:
+                show_error(unicode(e))
             else:
-                file_name = file_name[len(root_dir):]
-                self.store[path][MissionsDialog.COLUMNS.FILE_NAME] = file_name
+                store[path][MissionsDialog.COLUMNS.FILE_NAME] = relative_path
 
     def _on_data_changed(self):
         flag = len(self.store) > 0
