@@ -68,10 +68,8 @@ class MissionsService(DefaultMissionsService, ClientServiceMixin):
 
     def startService(self):
         DefaultMissionsService.startService(self)
-        d = self.cl_client.mission_destroy()
         if self.connection_was_lost and self.mission_was_running:
-            d.addCallback(lambda unused: self.mission_run())
-        return d
+            return self.mission_run()
 
     @defer.inlineCallbacks
     def stopService(self):
@@ -124,17 +122,25 @@ class MissionsService(DefaultMissionsService, ClientServiceMixin):
 
     def mission_stop(self):
         self._set_state(MISSION_STATE.STOPPING)
-        self.cl_client.chat_all(unicode(_("Stopping mission...")))
+        name = self.mission_info['name']
+        self.cl_client.chat_all(
+            unicode(_("Stopping mission '{0}'...").format(name)))
         return self.cl_client.mission_destroy()
 
-    @defer.inlineCallbacks
     def mission_restart(self):
-        self.cl_client.chat_all(unicode(_("Restarting mission...")))
-        yield self.mission_stop()
-        yield self.mission_run()
+        name = self.mission_info['name']
+        self.cl_client.chat_all(
+            unicode(_("Restarting mission '{0}'...").format(name)))
+        return self.update_running_mission()
 
-    def current_was_changed(self):
-        self.mission_restart()
+    @defer.inlineCallbacks
+    def update_running_mission(self):
+        try:
+            yield self.mission_stop()
+            yield self.mission_run()
+        except Exception as e:
+            LOG.error("Failed to update running mission: {0}".format(
+                      unicode(e)))
 
     def _timer_tick(self):
         self.time_left -= 1
@@ -167,4 +173,4 @@ class MissionsService(DefaultMissionsService, ClientServiceMixin):
 
     @property
     def time_left_verbose_str(self):
-        return _("Time left: {0}").format(self.time_left_str)
+        return _("Time left: {0}.").format(self.time_left_str)

@@ -123,8 +123,8 @@ class ServerSettings(dict):
         value = self._get_value(section, attr_name)
         if value is None:
             raise ValueError(
-                _("Please, explicitly specify your local address as '{:}' "
-                  "attribute in '{:}' secton in '{:}' file.").format(
+                _("Please, explicitly specify your local address as "
+                  "'{0}' attribute in '{1}' secton in '{2}' file.").format(
                   attr_name, section, self.file_name))
         return value
 
@@ -134,8 +134,8 @@ class ServerSettings(dict):
         value = self._get_value(section, attr_name)
         if value is None:
             raise ValueError(
-                _("Please, specify path to events log as '{:}' "
-                  "attribute in '{:}' secton in '{:}' file.").format(
+                _("Please, specify path to events log as "
+                  "'{0}' attribute in '{1}' secton in '{2}' file.").format(
                   attr_name, section, self.file_name))
         return os.path.join(os.path.dirname(user_settings.server_path), value)
 

@@ -525,10 +525,6 @@ class MainWindow(gtk.Window):
 
         toolbar.insert(gtk.SeparatorToolItem(), 1)
 
-        # m_settings = gtk.MenuItem(_("Settings"))
-        # m_settings.connect('select', self.on_menu_settings_select)
-        # m_bar.append(m_settings)
-
         # Quit -----------------------------------------------------------------
         quit = gtk.ToolButton(gtk.STOCK_QUIT)
         quit.connect("clicked", self.on_quit)
@@ -820,7 +816,7 @@ class MainWindow(gtk.Window):
                 widget.is_changed_not_from_ui is False
                 and root_service.commander.services.missions.is_mission_running
             ):
-                root_service.commander.services.missions.current_was_changed()
+                root_service.commander.services.missions.update_running_mission()
 
         self._update_mission_flow_buttons()
 
