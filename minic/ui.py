@@ -166,6 +166,10 @@ class MissionsDialog(gtk.Dialog):
                 value = int(new_value)
             except ValueError:
                 show_error(_("Duration value must be an integer"), self)
+                return
+
+            if value <= 0:
+                show_error(_("Duration value must be greater than 0"), self)
             else:
                 self.store[path][MissionsDialog.COLUMNS.DURATION] = value
 
