@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import gtk
-import os
 import tx_logging
 
 from minic.constants import MISSION_STATE
@@ -643,6 +642,28 @@ class MainWindow(gtk.Window):
         mission_selector.add_attribute(cell, 'text', 1)
         mission_selector.set_tooltip_text(_("Current mission"))
         mission_selector.connect('changed', self.on_mission_selector_changed)
+
+        def patch_mission_selector():
+            import types
+
+            def clear_store(self):
+                self.is_clearing = True
+                gtk.ListStore.clear(self)
+                self.is_clearing = False
+
+            store.is_clearing = False
+            store.clear = types.MethodType(clear_store, store)
+
+            def set_active_not_from_ui(self, index):
+                self.is_changed_not_from_ui = True
+                self.set_active(index)
+                self.is_changed_not_from_ui = False
+
+            mission_selector.is_changed_not_from_ui = False
+            mission_selector.set_active_not_from_ui = types.MethodType(
+                set_active_not_from_ui, mission_selector)
+
+        patch_mission_selector()
         self.mission_selector = mission_selector
 
         button = to_button(gtk.STOCK_EDIT)
@@ -730,7 +751,6 @@ class MainWindow(gtk.Window):
         frame = gtk.Frame(label=_("Mission"))
         frame.add(alignment)
 
-        self._mission_changed_not_by_user = False
         self._update_missions_box()
         self._display_mission_state()
         self._display_mission_time_left()
@@ -751,30 +771,38 @@ class MainWindow(gtk.Window):
     def _update_missions_box(self):
         store = self.mission_selector.get_model()
 
-        current_index = self.mission_selector.get_active()
-        current_id = missions.get_current_id() if current_index == -1 else \
-                     store[current_index][0]
+        old_index = self.mission_selector.get_active()
+        old_id = missions.get_current_id() if old_index == -1 else \
+                     store[old_index][0]
 
         store.clear()
         new_index = -1
 
         for i, m in enumerate(missions.load()):
-            id_ = m['id']
-            store.append((id_, m['name'], ))
-            if current_id is not None and current_id == id_:
+            item_id = m['id']
+            store.append((item_id, m['name'], ))
+            if old_id is not None and old_id == item_id:
                 new_index = i
 
         if len(store) and new_index == -1:
+            # Explicilty set current mission if if was not set
             new_index = 0
 
         if new_index == -1:
+            # if mission list is empty, disable all mission flow controls
             self._update_mission_flow_buttons()
+            # but if some mission was running, make it possible to stop it
+            if root_service.commander.services.missions.is_mission_running:
+                self.b_mission_stop.set_sensitive(True)
         else:
-            self._mission_changed_not_by_user = True
             self.mission_selector.set_active(new_index)
 
     def on_mission_selector_changed(self, widget):
         store = widget.get_model()
+
+        if store.is_clearing:
+            return
+
         index = widget.get_active()
 
         old_id = missions.get_current_id()
@@ -783,13 +811,12 @@ class MainWindow(gtk.Window):
         if new_id != old_id:
             missions.set_current_id(new_id)
             if (
-                self._mission_changed_not_by_user is False
+                widget.is_changed_not_from_ui is False
                 and root_service.commander.services.missions.is_mission_running
             ):
                 root_service.commander.services.missions.current_was_changed()
 
         self._update_mission_flow_buttons()
-        self._mission_changed_not_by_user = False
 
     def _lock_mission_controls(self):
         self.mission_selector.set_sensitive(False)
@@ -877,8 +904,7 @@ class MainWindow(gtk.Window):
         old_index = self.mission_selector.get_active()
 
         if new_index != old_index:
-            self._mission_changed_not_by_user = True
-            self.mission_selector.set_active(new_index)
+            self.mission_selector.set_active_not_from_ui(new_index)
 
         # Update mission info
         self._display_mission_state()
