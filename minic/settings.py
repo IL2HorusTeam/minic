@@ -4,6 +4,7 @@ import json
 import platform
 import os
 
+import minic
 from minic.util import ugettext_lazy as _
 
 
@@ -27,8 +28,6 @@ LOG_SETTINGS = {
 
 CONSOLE_TIMEOUT = 1.0
 DEVICE_LINK_TIMEOUT = 1.0
-
-# TODO: add version
 
 
 class UserSettings(object):
@@ -58,6 +57,7 @@ class UserSettings(object):
         .. todo:: may raise some exception
         """
         with open(self.file_path, 'w') as f:
+            self.version = minic.VERSION
             json.dump(self.__container, f, indent=2)
 
     def __getattr__(self, name):
@@ -270,3 +270,31 @@ class missions(object):
     @classmethod
     def full_relative_path(cls, short_relative_path):
         return os.path.join(cls.dogfight_subpath, short_relative_path)
+
+
+def upgrade_user_settings():
+    """
+    Upgrade user settings from older versions.
+    """
+    if user_settings.version == minic.VERSION:
+        return
+    _upgrade_user_settings_to_0_1_8()
+    user_settings.sync()
+
+
+def _upgrade_user_settings_to_0_1_8():
+    """
+    Upgrade settings from the earliest version up to 0.1.8.
+    """
+    if user_settings.version is not None:
+        return
+
+    def fix_mission(mission):
+        file_name = mission['file_name'].lstrip(os.path.sep)
+        if file_name.startswith(missions.dogfight_subpath):
+            start = len(missions.dogfight_subpath)
+            file_name = file_name[start:].lstrip(os.path.sep)
+        return (mission['id'], mission['name'], file_name, mission['duration'])
+
+    missions.save(map(fix_mission, missions.load()))
+    user_settings.version = (0, 1, 8)
