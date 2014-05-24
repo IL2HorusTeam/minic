@@ -99,10 +99,10 @@ class UserSettings(object):
             if file_name.startswith(MissionManager.dogfight_subpath):
                 start = len(MissionManager.dogfight_subpath)
                 file_name = file_name[start:].lstrip(os.path.sep)
-            mission['file_name'] = file_name
-            return mission
+            return (mission['id'], mission['name'], file_name, mission['duration'])
 
-        MissionManager.update(map(fix_mission, MissionManager._get_raw_list()))
+        MissionManager._set_raw_list(map(
+            fix_mission, MissionManager._get_raw_list()))
         self.version = (0, 1, 8)
 
     def _upgrade_to_0_1_9(self):
