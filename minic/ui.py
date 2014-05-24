@@ -292,8 +292,7 @@ class MissionsDialog(gtk.Dialog):
     def on_move_to_top(self, widget):
         store = self.store
         cursor = self.current_cursor
-        row = store[cursor]
-        data = (row[0], row[1], row[2], row[3], )
+        data = tuple(store[cursor])
 
         del store[cursor]
         store.prepend(data)
@@ -308,8 +307,7 @@ class MissionsDialog(gtk.Dialog):
     def _move_current_row(self, delta):
         store = self.store
         cursor = self.current_cursor
-        row = store[cursor]
-        data = (row[0], row[1], row[2], row[3], )
+        data = tuple(store[cursor])
 
         del store[cursor]
         cursor += delta
@@ -319,8 +317,7 @@ class MissionsDialog(gtk.Dialog):
     def on_move_to_bottom(self, widget):
         store = self.store
         cursor = self.current_cursor
-        row = store[cursor]
-        data = (row[0], row[1], row[2], row[3], )
+        data = tuple(store[cursor])
 
         del store[cursor]
         store.append(data)
