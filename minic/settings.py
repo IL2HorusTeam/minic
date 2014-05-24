@@ -99,7 +99,8 @@ class UserSettings(object):
             if file_name.startswith(MissionManager.dogfight_subpath):
                 start = len(MissionManager.dogfight_subpath)
                 file_name = file_name[start:].lstrip(os.path.sep)
-            return (mission['id'], mission['name'], file_name, mission['duration'])
+            mission['file_name'] = file_name
+            return mission
 
         MissionManager._set_raw_list(map(
             fix_mission, MissionManager._get_raw_list()))
