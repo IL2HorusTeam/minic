@@ -32,8 +32,16 @@ class MissionManager(object):
         return value
 
     @classmethod
+    def _get_raw_list(cls):
+        return cls._get_raw().setdefault('list', [])
+
+    @classmethod
+    def _set_raw_list(cls, value):
+        cls._get_raw()['list'] = value
+
+    @classmethod
     def all(cls):
-        missions = cls._get_raw().setdefault('list', [])
+        missions = cls._get_raw_list()
         if cls._first_load_flag:
             return list(map(lambda x: Mission(*x), missions))
             cls._first_load_flag = False
@@ -42,7 +50,7 @@ class MissionManager(object):
 
     @classmethod
     def update(cls, missions):
-        cls._get_raw()['list'] = [Mission(*x) for x in missions]
+        cls._set_raw_list([Mission(*x) for x in missions])
         user_settings.sync()
 
     @classmethod
