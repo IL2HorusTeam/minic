@@ -50,6 +50,7 @@ class UserSettings(object):
         else:
             with open(self.file_path, 'r') as f:
                 self.__container = json.load(f)
+            self.upgrade()
 
     def sync(self):
         """

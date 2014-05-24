@@ -83,7 +83,6 @@ def main():
         return
     try:
         user_settings.load()
-        user_settings.upgrade()
     except Exception as e:
         show_error(_("Failed load user settings: {0}").format(unicode(e)))
         return
