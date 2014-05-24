@@ -110,18 +110,17 @@ class UserSettings(object):
         """
         Upgrade settings from ``0.1.8`` up to ``0.1.9``.
         """
-        if tuple(self.version) != (0, 1, 8):
-            return
-
-        from minic.models import Mission, MissionManager
-        MissionManager.update(map(
-            lambda x: Mission(
-                id=x['id'],
-                name=x['name'],
-                relative_path=x['file_name'],
-                duration=x['duration']),
-            MissionManager._get_raw_list()))
-        self.version = (0, 1, 9)
+        version = (0, 1, 9)
+        if minic.version_lt(self.version, version):
+            from minic.models import Mission, MissionManager
+            MissionManager.update(map(
+                lambda x: Mission(
+                    id=x['id'],
+                    name=x['name'],
+                    relative_path=x['file_name'],
+                    duration=x['duration']),
+                MissionManager._get_raw_list()))
+            self.version = version
 
 
 user_settings = UserSettings()
