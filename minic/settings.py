@@ -25,7 +25,6 @@ LOG_SETTINGS = {
     'timeFormat': None,
 }
 
-
 CONSOLE_TIMEOUT = 1.0
 DEVICE_LINK_TIMEOUT = 1.0
 
@@ -75,6 +74,51 @@ class UserSettings(object):
         else:
             # If attribute belongs directly to instance
             super(UserSettings, self).__setattr__(name, value)
+
+    def upgrade(self):
+        """
+        Upgrade user settings from older versions.
+        """
+        if self.version != minic.VERSION:
+            self._upgrade_to_0_1_8()
+            self._upgrade_to_0_1_9()
+            self.sync()
+
+    def _upgrade_to_0_1_8(self):
+        """
+        Upgrade settings from the earliest version up to ``0.1.8``.
+        """
+        if self.version is not None:
+            return
+
+        from minic.models import MissionManager
+
+        def fix_mission(mission):
+            file_name = mission['file_name'].lstrip(os.path.sep)
+            if file_name.startswith(MissionManager.dogfight_subpath):
+                start = len(MissionManager.dogfight_subpath)
+                file_name = file_name[start:].lstrip(os.path.sep)
+            return (mission['id'], mission['name'], file_name, mission['duration'])
+
+        MissionManager.update(map(fix_mission, MissionManager.all()))
+        self.version = (0, 1, 8)
+
+    def _upgrade_to_0_1_9(self):
+        """
+        Upgrade settings from ``0.1.8`` up to ``0.1.9``.
+        """
+        if tuple(self.version) != (0, 1, 8):
+            return
+
+        from minic.models import Mission, MissionManager
+        MissionManager.update(map(
+            lambda x: Mission(
+                id=x['id'],
+                name=x['name'],
+                relative_path=x['file_name'],
+                duration=x['duration']),
+            MissionManager.all()))
+        self.version = (0, 1, 9)
 
 
 user_settings = UserSettings()
@@ -165,136 +209,3 @@ class ServerSettings(dict):
 
 
 server_settings = ServerSettings()
-
-
-class missions(object):
-
-    _id_generator = None
-    dogfight_subpath = os.path.join('Net', 'dogfight')  # case-sensitive
-
-    @classmethod
-    def _get_settings(cls):
-        value = user_settings.missions
-        if value is None:
-            value = {
-                'list': [],
-                'current_id': None,
-            }
-            user_settings.missions = value
-        return value
-
-    @classmethod
-    def load(cls):
-        return cls._get_settings().setdefault('list', [])
-
-    @classmethod
-    def save(cls, iterable):
-        cls._get_settings()['list'] = [
-            {
-                'id': i[0],
-                'name': i[1],
-                'file_name': i[2],
-                'duration': i[3],
-            } for i in iterable
-        ]
-        user_settings.sync()
-
-    @classmethod
-    def count(cls):
-        return len(cls.load())
-
-    @classmethod
-    def get_current_id(cls):
-        return cls._get_settings().setdefault('current_id', None)
-
-    @classmethod
-    def set_current_id(cls, value):
-        cls._get_settings()['current_id'] = value
-        user_settings.sync()
-
-    @classmethod
-    def generate_id(cls):
-        if cls._id_generator is None:
-
-            def id_generator():
-                number = max([m['id'] for m in cls.load()] or [0, ])
-                while True:
-                    number += 1
-                    yield number
-
-            cls._id_generator = id_generator()
-        return next(cls._id_generator)
-
-    @classmethod
-    def get_current_mission(cls):
-        current_id = cls.get_current_id()
-        if current_id is not None:
-            for m in cls.load():
-                if m['id'] == current_id:
-                    return m
-
-    @classmethod
-    def get_index_by_id(cls, mission_id):
-        index = -1
-        for i, m in enumerate(cls.load()):
-            if m['id'] == mission_id:
-                index = i
-                break
-        return index
-
-    @classmethod
-    def get_id_by_index(cls, index):
-        try:
-            return cls.load()[index]['id']
-        except ValueError:
-            return None
-
-    @classmethod
-    def get_root_path(cls):
-        return os.path.join(os.path.dirname(user_settings.server_path),
-                            'Missions',
-                            cls.dogfight_subpath)
-
-    @classmethod
-    def absolute_path(cls, short_relative_path):
-        return os.path.join(cls.get_root_path(), short_relative_path)
-
-    @classmethod
-    def short_relative_path(cls, absolute_path):
-        root_path = cls.get_root_path()
-        if absolute_path.startswith(root_path):
-            return absolute_path[len(root_path) + len(os.path.sep):]
-        raise ValueError(_("Missions must be placed within '{0}' directory.")
-                         .format(root_path))
-
-    @classmethod
-    def full_relative_path(cls, short_relative_path):
-        return os.path.join(cls.dogfight_subpath, short_relative_path)
-
-
-def upgrade_user_settings():
-    """
-    Upgrade user settings from older versions.
-    """
-    if user_settings.version == minic.VERSION:
-        return
-    _upgrade_user_settings_to_0_1_8()
-    user_settings.sync()
-
-
-def _upgrade_user_settings_to_0_1_8():
-    """
-    Upgrade settings from the earliest version up to 0.1.8.
-    """
-    if user_settings.version is not None:
-        return
-
-    def fix_mission(mission):
-        file_name = mission['file_name'].lstrip(os.path.sep)
-        if file_name.startswith(missions.dogfight_subpath):
-            start = len(missions.dogfight_subpath)
-            file_name = file_name[start:].lstrip(os.path.sep)
-        return (mission['id'], mission['name'], file_name, mission['duration'])
-
-    missions.save(map(fix_mission, missions.load()))
-    user_settings.version = (0, 1, 8)

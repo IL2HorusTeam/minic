@@ -2,10 +2,13 @@
 import gtk
 import tx_logging
 
-from minic.constants import MISSION_STATE
+from il2ds_middleware.constants import MISSION_STATUS
+
+from minic.constants import MISSION_STATUS_INFO
+from minic.models import MissionManager
 from minic.resources import image_path
 from minic.service import root_service
-from minic.settings import user_settings, missions
+from minic.settings import user_settings
 from minic.util import ugettext_lazy as _
 
 
@@ -79,7 +82,7 @@ class MissionsDialog(gtk.Dialog):
     class COLUMNS(object):
         ID = 0
         NAME = 1
-        FILE_NAME = 2
+        RELATIVE_PATH = 2
         DURATION = 3
 
     def __init__(self, parent):
@@ -141,21 +144,21 @@ class MissionsDialog(gtk.Dialog):
         self.treeview.append_column(column)
 
         # File column ----------------------------------------------------------
-        def file_name_renderer(treeviewcolumn, cell, model, iterator):
-            value = model.get_value(iterator, MissionsDialog.COLUMNS.FILE_NAME)
+        def relative_path_renderer(treeviewcolumn, cell, model, iterator):
+            value = model.get_value(iterator, MissionsDialog.COLUMNS.RELATIVE_PATH)
             if not value:
                 value = _("Not selected")
             cell.set_property('text', value)
 
         renderer = gtk.CellRendererText()
         column = gtk.TreeViewColumn(_("File"), renderer,
-                                    text=MissionsDialog.COLUMNS.FILE_NAME)
+                                    text=MissionsDialog.COLUMNS.RELATIVE_PATH)
         column.set_sizing(gtk.TREE_VIEW_COLUMN_AUTOSIZE)
         column.set_resizable(True)
         column.set_expand(True)
-        column.set_cell_data_func(renderer, file_name_renderer)
+        column.set_cell_data_func(renderer, relative_path_renderer)
         self.treeview.append_column(column)
-        self.column_file_name = column
+        self.column_relative_path = column
 
         # Duration column ------------------------------------------------------
         def on_duration_edited(cell, path, new_value):
@@ -230,18 +233,18 @@ class MissionsDialog(gtk.Dialog):
         return vbox
 
     def on_new_clicked(self, widget):
-        new_id = missions.generate_id()
+        new_id = MissionManager.generate_id()
 
         if len(self.store) == 0:
             # Create default row
             cursor = 0
             name = _("New mission")
-            file_name = None
+            relative_path = None
             duration = 60
         else:
             # Copy existing row
             cursor = self.current_cursor
-            id_, selected_name, file_name, duration = self.store[cursor]
+            id_, selected_name, relative_path, duration = self.store[cursor]
 
             def split_name(name):
                 chunks = name.rsplit('.', 1)
@@ -267,7 +270,7 @@ class MissionsDialog(gtk.Dialog):
             name = "{0}.{1}".format(name, suffix)
             cursor += 1
 
-        self.store.insert(cursor, (new_id, name, file_name, duration))
+        self.store.insert(cursor, (new_id, name, relative_path, duration))
         self._on_data_changed()
         self.treeview.set_cursor(cursor)
 
@@ -355,23 +358,23 @@ class MissionsDialog(gtk.Dialog):
         path, column, cell_x, cell_y = info
         store = treeview.get_model()
 
-        if column == self.column_file_name:
+        if column == self.column_relative_path:
 
             if not user_settings.server_path:
                 show_error(_("Please, set path to game server"), self)
                 return
 
-            file_name = store[path][MissionsDialog.COLUMNS.FILE_NAME]
+            relative_path = store[path][MissionsDialog.COLUMNS.RELATIVE_PATH]
             chooser = gtk.FileChooserDialog(title=_("Select IL-2 FB mission"),
                                             action=gtk.FILE_CHOOSER_ACTION_OPEN,
                                             buttons=(gtk.STOCK_CANCEL,
                                                      gtk.RESPONSE_CANCEL,
                                                      gtk.STOCK_OPEN,
                                                      gtk.RESPONSE_OK))
-            if file_name is None:
-                chooser.set_current_folder(missions.get_root_path())
+            if relative_path is None:
+                chooser.set_current_folder(MissionManager.get_root_path())
             else:
-                chooser.set_filename(missions.absolute_path(file_name))
+                chooser.set_filename(MissionManager.absolute_path(relative_path))
 
             f_filter = gtk.FileFilter()
             f_filter.set_name("IL-2 FB missions (*.mis)")
@@ -379,18 +382,18 @@ class MissionsDialog(gtk.Dialog):
             chooser.add_filter(f_filter)
 
             response = chooser.run()
-            file_name = chooser.get_filename()
+            relative_path = chooser.get_filename()
             chooser.destroy()
 
             if response != gtk.RESPONSE_OK:
                 return
 
             try:
-                relative_path = missions.short_relative_path(file_name)
+                relative_path = MissionManager.short_relative_path(relative_path)
             except ValueError as e:
                 show_error(unicode(e))
             else:
-                store[path][MissionsDialog.COLUMNS.FILE_NAME] = relative_path
+                store[path][MissionsDialog.COLUMNS.RELATIVE_PATH] = relative_path
 
     def _on_data_changed(self):
         flag = len(self.store) > 0
@@ -407,7 +410,7 @@ class MissionsDialog(gtk.Dialog):
     def on_apply_clicked(self, widget):
         names = []
         for row in self.store:
-            if row[MissionsDialog.COLUMNS.FILE_NAME] is None:
+            if row[MissionsDialog.COLUMNS.RELATIVE_PATH] is None:
                 names.append(row[MissionsDialog.COLUMNS.NAME])
         if names:
             message = _("Please, select files for next missions: {0}.").format(
@@ -420,12 +423,12 @@ class MissionsDialog(gtk.Dialog):
     def _load_data(self):
         store = self.store
         store.clear()
-        for m in missions.load():
-            store.append((m['id'], m['name'], m['file_name'], m['duration'], ))
+        for mission in MissionManager.all():
+            store.append(mission)
         self._on_data_changed()
 
     def _save_data(self):
-        missions.save(self.store)
+        MissionManager.update(self.store)
 
     @property
     def store(self):
@@ -560,7 +563,7 @@ class MainWindow(gtk.Window):
 
         # Disconnected page
         label = gtk.Label(_("Not established"))
-        label.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse('#B00'))
+        label.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse('#7d2315'))
         button = gtk.Button(_("Connect"), gtk.STOCK_CONNECT)
         button.set_tooltip_text(_("Connect to server"))
         button.connect('clicked', self.on_connect_clicked)
@@ -568,7 +571,7 @@ class MainWindow(gtk.Window):
 
         # Connected page
         label = gtk.Label(_("Established"))
-        label.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse('#080'))
+        label.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse('#009944'))
         button = gtk.Button(_("Disconnect"), gtk.STOCK_DISCONNECT)
         button.set_tooltip_text(_("Disconnect for server"))
         button.connect('clicked', self.on_disconnect_clicked)
@@ -688,8 +691,8 @@ class MainWindow(gtk.Window):
         label = to_label(_("State"))
         table.attach(label, 0, 1, 1, 2, gtk.FILL)
 
-        self.lb_mission_state = to_label("MISSION STATE")
-        table.attach(self.lb_mission_state, 1, 2, 1, 2)
+        self.lb_mission_status = to_label("MISSION STATE")
+        table.attach(self.lb_mission_status, 1, 2, 1, 2)
 
         # Time left row --------------------------------------------------------
         label = to_label(_("Time left"))
@@ -758,11 +761,11 @@ class MainWindow(gtk.Window):
         frame.add(alignment)
 
         self._update_missions_box()
-        self._display_mission_state()
+        self._display_mission_status()
         self._display_mission_time_left()
 
         root_service.commander.services.missions.register_callbacks(
-            self.on_mission_state_changed,
+            self.on_mission_status_changed,
             self.on_mission_timer_tick)
 
         return frame
@@ -778,16 +781,15 @@ class MainWindow(gtk.Window):
         store = self.mission_selector.get_model()
 
         old_index = self.mission_selector.get_active()
-        old_id = missions.get_current_id() if old_index == -1 else \
+        old_id = MissionManager.get_current_id() if old_index == -1 else \
                      store[old_index][0]
 
         store.clear()
         new_index = -1
 
-        for i, m in enumerate(missions.load()):
-            item_id = m['id']
-            store.append((item_id, m['name'], ))
-            if old_id is not None and old_id == item_id:
+        for i, m in enumerate(MissionManager.all()):
+            store.append((m.id, m.name, ))
+            if old_id is not None and old_id == m.id:
                 new_index = i
 
         if len(store) and new_index == -1:
@@ -798,7 +800,7 @@ class MainWindow(gtk.Window):
             # if mission list is empty, disable all mission flow controls
             self._update_mission_flow_buttons()
             # but if some mission was running, make it possible to stop it
-            if root_service.commander.services.missions.is_mission_running:
+            if root_service.commander.services.missions.is_mission_playing:
                 self.b_mission_stop.set_sensitive(True)
         else:
             self.mission_selector.set_active(new_index)
@@ -811,16 +813,16 @@ class MainWindow(gtk.Window):
 
         index = widget.get_active()
 
-        old_id = missions.get_current_id()
+        old_id = MissionManager.get_current_id()
         new_id = None if index == -1 else store[index][0]
 
         if new_id != old_id:
-            missions.set_current_id(new_id)
+            MissionManager.set_current_id(new_id)
             if (
                 widget.is_changed_not_from_ui is False
-                and root_service.commander.services.missions.is_mission_running
+                and root_service.commander.services.missions.is_mission_playing
             ):
-                root_service.commander.services.missions.update_running_mission()
+                root_service.commander.services.missions.update_playing_mission()
 
         self._update_mission_flow_buttons()
 
@@ -839,7 +841,7 @@ class MainWindow(gtk.Window):
 
         if total:
             index = self.mission_selector.get_active()
-            is_running = root_service.commander.services.missions.is_mission_running
+            is_running = root_service.commander.services.missions.is_mission_playing
 
             self.b_mission_first.set_sensitive(index > 0)
             self.b_mission_prev.set_sensitive(total > 1)
@@ -903,21 +905,24 @@ class MainWindow(gtk.Window):
         index = len(self.mission_selector.get_model()) - 1
         self.mission_selector.set_active(index)
 
-    def on_mission_state_changed(self, state):
+    def on_mission_status_changed(self, status):
         # Update current mission on UI
-        current_id = missions.get_current_id()
-        new_index = missions.get_index_by_id(current_id)
+        current_id = MissionManager.get_current_id()
+        new_index = MissionManager.get_index_by_id(current_id)
         old_index = self.mission_selector.get_active()
 
         if new_index != old_index:
             self.mission_selector.set_active_not_from_ui(new_index)
 
         # Update mission info
-        self._display_mission_state()
+        self._display_mission_status()
         self._display_mission_time_left()
 
-        # Update state of mission flow controls
-        if state in [MISSION_STATE.STARTING, MISSION_STATE.STOPPING]:
+        # Update status of mission flow controls
+        if status in [
+            MISSION_STATUS.STARTING, MISSION_STATUS.STOPPING,
+            MISSION_STATUS.LOADING,
+        ]:
             self._lock_mission_controls()
         else:
             self._unlock_mission_controls()
@@ -925,11 +930,16 @@ class MainWindow(gtk.Window):
     def on_mission_timer_tick(self):
         self._display_mission_time_left()
 
-    def _display_mission_state(self):
-        state = root_service.commander.services.missions.state
-        self.lb_mission_state.set_text(unicode(state.verbose_name))
-        self.lb_mission_state.modify_fg(gtk.STATE_NORMAL,
-                                        gtk.gdk.color_parse(state.value))
+    def _display_mission_status(self):
+        status = root_service.commander.services.missions.status
+        info = MISSION_STATUS_INFO[status]
+
+        name = unicode(info['verbose_name'])
+        color_code = '#{0}'.format(info['color_hex'])
+
+        self.lb_mission_status.set_text(name)
+        self.lb_mission_status.modify_fg(
+            gtk.STATE_NORMAL, gtk.gdk.color_parse(color_code))
 
     def _display_mission_time_left(self):
         self.lb_mission_time_left.set_text(

@@ -19,8 +19,7 @@ from twisted.python.logfile import LogFile
 from tx_logging.observers import LevelFileLogObserver
 
 from minic.settings import (
-    USER_FILES_ROOT, LOG_ROOT, LOG_SETTINGS, user_settings,
-    upgrade_user_settings, )
+    USER_FILES_ROOT, LOG_ROOT, LOG_SETTINGS, user_settings, )
 from minic.ui import show_error, MainWindow
 from minic.util import ugettext_lazy as _
 
@@ -84,11 +83,11 @@ def main():
         return
     try:
         user_settings.load()
+        user_settings.upgrade()
     except Exception as e:
         show_error(_("Failed load user settings: {0}").format(unicode(e)))
         return
 
-    upgrade_user_settings()
     MainWindow()
     reactor.run()
 

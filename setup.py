@@ -77,7 +77,7 @@ setup(
     options={
         'py2exe': {
             'packages': [
-                'encodings', 'candv', 'il2ds_middleware', 'twisted', 'tx_logging',
+                'encodings', 'il2ds_middleware', 'twisted', 'tx_logging',
             ],
             'includes': [
                 'cairo', 'pango', 'pangocairo', 'gobject', 'gio', 'atk',
