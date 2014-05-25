@@ -8,6 +8,7 @@ import os
 import sys
 
 if os.name == 'nt' and hasattr(sys, 'frozen'):
+    # True only if running as a py2exe app
     sys.stdout = open(os.devnull, 'w')
     sys.stderr = open(os.devnull, 'w')
 
@@ -25,7 +26,7 @@ from tx_logging.observers import LevelFileLogObserver
 from minic.settings import (
     USER_FILES_ROOT, LOG_ROOT, LOG_SETTINGS, user_settings, )
 from minic.ui import show_error, MainWindow
-from minic.util import ugettext_lazy as _
+from minic.util import ugettext_lazy as _, pid_exists
 
 
 class PidLock(object):
@@ -35,12 +36,8 @@ class PidLock(object):
         if not os.path.exists(self.pidpath):
             return
         with open(self.pidpath, 'r') as f:
-            pid = f.readline().strip()
-        try:
-            os.kill(int(pid), 0)
-        except OSError:
-            pass
-        else:
+            pid = int(f.readline().strip())
+        if pid_exists(pid):
             raise RuntimeError(_("Another instance is still running"))
 
     def __enter__(self):
@@ -102,9 +99,12 @@ if __name__ == "__main__":
     except RuntimeError as e:
         show_error(e)
         sys.exit()
+
     try:
         pid_lock = PidLock()
     except Exception as e:
         show_error(e)
+        sys.exit()
+
     with pid_lock:
         main()
