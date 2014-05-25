@@ -3,12 +3,16 @@
 import pygtk
 pygtk.require('2.0')
 
+import logging
+import os
+import sys
+
+if os.name == 'nt' and hasattr(sys, 'frozen'):
+    sys.stdout = open(os.devnull, 'w')
+    sys.stderr = open(os.devnull, 'w')
+
 from twisted.internet import gtk2reactor
 gtk2reactor.install()
-
-import logging
-import sys
-import os
 
 import minic
 minic.APP_ROOT = os.path.dirname(os.path.realpath(sys.argv[0]))
