@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import ConfigParser
 import json
-import platform
 import os
 
 import minic
@@ -10,7 +9,7 @@ from minic.util import ugettext_lazy as _
 
 APPLICATION_GROUP = 'IL2HorusTeam'
 
-if not any(platform.win32_ver()):
+if os.name == 'posix':
     APPLICATION_GROUP = '.' + APPLICATION_GROUP
 
 USER_FILES_ROOT = os.path.join(
