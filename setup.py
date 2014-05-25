@@ -71,6 +71,7 @@ setup(
         {
             'script': 'application.py',
             'icon_resources': [(1, os.path.join(APP_IMAGES_PATH, 'logo.ico'))],
+            'dest_base': 'minic',
         },
     ],
     data_files=data_files,
