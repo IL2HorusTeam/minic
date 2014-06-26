@@ -15,6 +15,6 @@ Install ``py2exe`` and run:
 
     python setup.py py2exe
 
-You will get fully-autonomous piece of software in ``dist`` directory.
+You will get stand-alone software in ``dist`` directory.
 
 .. _version changes: ./CHANGES.rst

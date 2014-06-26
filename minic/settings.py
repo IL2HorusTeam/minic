@@ -2,26 +2,33 @@
 import ConfigParser
 import json
 import os
+import shutil
 
 import minic
 from minic.util import ugettext_lazy as _
 
 
-APPLICATION_GROUP = 'IL2HorusTeam'
+def get_group_dir(group_name):
+    return os.path.join(os.path.expanduser("~"), group_name)
 
-if os.name == 'posix':
-    APPLICATION_GROUP = '.' + APPLICATION_GROUP
 
-USER_FILES_ROOT = os.path.join(
-    os.path.expanduser("~"), APPLICATION_GROUP, 'minic')
-LOG_ROOT = os.path.join(USER_FILES_ROOT, 'logs')
+def get_settings_root(group_name):
+    return os.path.join(get_group_dir(group_name), 'minic')
 
+
+APPLICATION_GROUP = ".IL2HorusTeam"
+#: Needed to migrate settings to v.0.1.12 from elder versions
+APPLICATION_GROUP_OLD = "IL2HorusTeam"
+
+SETTINGS_ROOT = get_settings_root(APPLICATION_GROUP)
+
+LOG_ROOT = os.path.join(SETTINGS_ROOT, 'logs')
 LOG_SETTINGS = {
-    'filename': os.path.join(LOG_ROOT, 'minic.log'),
-    'maxBytes': 1024 * 1024 * 5,  # 5 MiB
-    'backupCount': 10,
+    'file_path': os.path.join(LOG_ROOT, 'minic.log'),
+    'max_bytes': 1024 * 1024 * 5,  # 5 MiB
+    'max_backups': 10,
     'level': 'INFO',
-    'timeFormat': None,
+    'time_format': None,
 }
 
 CONSOLE_TIMEOUT = 1.0
@@ -38,18 +45,37 @@ class UserSettings(object):
 
     @property
     def file_path(self):
-        return os.path.join(USER_FILES_ROOT, self.file_name)
+        return os.path.join(SETTINGS_ROOT, self.file_name)
 
     def load(self):
         """
         .. todo:: may raise some exception
         """
         if not os.path.exists(self.file_path):
-            self.__container = {}
+            if not self.try_old_settings():
+                self.__container.clear()
         else:
             with open(self.file_path, 'r') as f:
                 self.__container = json.load(f)
             self.upgrade()
+
+    def try_old_settings(self):
+        """
+        Try to find settings from previous versions and move them to a propper
+        place.
+
+        :returns: `True` if old settings were found, `False` otherwise.
+        """
+        settings_root = get_settings_root(APPLICATION_GROUP_OLD)
+        file_path = os.path.join(settings_root, self.file_name)
+
+        result = os.path.exists(file_path)
+        if result:
+            #: .. todo:: may raise some exception
+            shutil.copyfile(file_path, self.file_path)
+            self.load()
+            shutil.rmtree(get_group_dir(APPLICATION_GROUP_OLD))
+        return result
 
     def sync(self):
         """
@@ -82,11 +108,12 @@ class UserSettings(object):
         if self.version != minic.VERSION:
             self._upgrade_to_0_1_8()
             self._upgrade_to_0_1_9()
+            self.version = minic.VERSION
             self.sync()
 
     def _upgrade_to_0_1_8(self):
         """
-        Upgrade settings from the earliest version up to ``0.1.8``.
+        Upgrade settings from the earliest version up to `0.1.8`.
         """
         if self.version is not None:
             return
@@ -107,7 +134,7 @@ class UserSettings(object):
 
     def _upgrade_to_0_1_9(self):
         """
-        Upgrade settings from ``0.1.8`` up to ``0.1.9``.
+        Upgrade settings from `0.1.8` up to `0.1.9`.
         """
         version = (0, 1, 9)
         if minic.version_lt(self.version, version):

@@ -4,6 +4,6 @@
 #
 #     pip install -r requirements.pip
 
-il2ds-middleware>=0.10.1
+il2ds-middleware>=0.10.3
 twisted>=13.2.0
 tx-logging>=1.0.0
