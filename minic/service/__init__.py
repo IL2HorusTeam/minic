@@ -4,16 +4,21 @@ import tx_logging
 from collections import namedtuple
 
 from il2ds_middleware.parser import (
-    ConsoleParser, DeviceLinkParser, EventLogParser, )
+    ConsoleParser, DeviceLinkParser, EventLogParser,
+)
 from il2ds_middleware.protocol import (
-    DeviceLinkClient, ReconnectingConsoleClientFactory, )
+    DeviceLinkClient, ReconnectingConsoleClientFactory,
+)
 from il2ds_middleware.service import (
-    LogWatchingService, ClientServiceMixin as BaseClientServiceMixin, )
+    LogWatchingService, ClientServiceMixin as BaseClientServiceMixin,
+)
 
 from twisted.application.service import MultiService, Service
 from twisted.internet import defer
 
-from minic.settings import server_settings, CONSOLE_TIMEOUT, DEVICE_LINK_TIMEOUT
+from minic.settings import (
+    server_settings, CONSOLE_TIMEOUT, DEVICE_LINK_TIMEOUT,
+)
 from minic.util import ugettext_lazy as _
 
 
@@ -102,12 +107,14 @@ class RootService(Service):
         self.commander.parent = self
 
     def register_callbacks(self,
-                           connection_done=None,
-                           connection_closed=None,
-                           connection_lost=None):
-        self.cb_connection_done = connection_done
-        self.cb_connection_closed = connection_closed
-        self.cb_connection_lost = connection_lost
+                           on_connection_done=None,
+                           on_connection_failed=None,
+                           on_connection_closed=None,
+                           on_connection_lost=None):
+        self.cb_connection_done = on_connection_done
+        self.cb_connection_failed = on_connection_failed
+        self.cb_connection_closed = on_connection_closed
+        self.cb_connection_lost = on_connection_lost
 
     def startService(self):
         server_settings.load()
@@ -150,11 +157,11 @@ class RootService(Service):
         if not self.running:
             defer.returnValue(None)
 
-        # Stop commander service if running -----------------------------------
+        # Stop commander service if running ------------------------------------
         if self.commander.running:
             yield self.commander.stopService()
 
-        # Stop Device Link UDP listener ---------------------------------------
+        # Stop Device Link UDP listener ----------------------------------------
         yield defer.maybeDeferred(self.dl_connector.stopListening)
 
         # Disconnect from game server's console, if connecting was started
@@ -174,10 +181,13 @@ class RootService(Service):
             return
 
         # On connecting --------------------------------------------------------
-        d = self.client_factory.on_connecting.addCallback(self.on_connection_done)
+        d = self.client_factory.on_connecting.addCallback(
+            self.on_connection_done)
 
         if self.cb_connection_done:
             d.addCallback(self.cb_connection_done)
+        if self.cb_connection_failed:
+            d.addErrback(self.cb_connection_failed)
 
         # On connection lost ---------------------------------------------------
         d = self.client_factory.on_connection_lost.addCallbacks(

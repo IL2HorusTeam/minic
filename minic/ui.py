@@ -592,6 +592,7 @@ class MainWindow(gtk.Window):
 
         root_service.register_callbacks(
             self.on_connection_done,
+            self.on_connection_failed,
             self.on_connection_closed,
             self.on_connection_lost)
 
@@ -779,7 +780,7 @@ class MainWindow(gtk.Window):
 
         old_index = self.mission_selector.get_active()
         old_id = MissionManager.get_current_id() if old_index == -1 else \
-                     store[old_index][0]
+                 store[old_index][0]
 
         store.clear()
         new_index = -1
@@ -861,21 +862,19 @@ class MainWindow(gtk.Window):
         self.b_mission_last.set_sensitive(False)
 
     def on_connection_done(self, *args):
-        self.connection_stack.set_current_page(
-            MainWindow.CONNECTION_TABS.CONNECTED)
-        self._update_mission_flow_buttons()
+        self._update_connection_page(MainWindow.CONNECTION_TABS.CONNECTED)
+
+    def on_connection_failed(self, *args):
+        self._update_connection_page(MainWindow.CONNECTION_TABS.DISCONNECTED)
 
     def on_connection_closed(self, *args):
-        self.connection_stack.set_current_page(
-            MainWindow.CONNECTION_TABS.DISCONNECTED)
-        self._on_disconnected()
+        self._update_connection_page(MainWindow.CONNECTION_TABS.DISCONNECTED)
 
     def on_connection_lost(self, reason):
-        self.connection_stack.set_current_page(
-            MainWindow.CONNECTION_TABS.CONNECTING)
-        self._on_disconnected()
+        self._update_connection_page(MainWindow.CONNECTION_TABS.CONNECTING)
 
-    def _on_disconnected(self):
+    def _update_connection_page(self, page):
+        self.connection_stack.set_current_page(page)
         self._update_mission_flow_buttons()
 
     def on_b_mission_first_clicked(self, widget):
