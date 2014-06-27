@@ -106,11 +106,11 @@ class RootService(Service):
         self.commander = CommanderService()
         self.commander.parent = self
 
-    def register_callbacks(self,
-                           on_connection_done=None,
-                           on_connection_failed=None,
-                           on_connection_closed=None,
-                           on_connection_lost=None):
+    def set_callbacks(self,
+                      on_connection_done=None,
+                      on_connection_failed=None,
+                      on_connection_closed=None,
+                      on_connection_lost=None):
         self.cb_connection_done = on_connection_done
         self.cb_connection_failed = on_connection_failed
         self.cb_connection_closed = on_connection_closed

@@ -16,12 +16,11 @@ LOG = tx_logging.getLogger('ui')
 
 
 def show_message(message, message_type, parent=None):
-    md = gtk.MessageDialog(
-        parent,
-        gtk.DIALOG_DESTROY_WITH_PARENT,
-        message_type,
-        gtk.BUTTONS_CLOSE,
-        unicode(message))
+    md = gtk.MessageDialog(parent,
+                           gtk.DIALOG_DESTROY_WITH_PARENT,
+                           message_type,
+                           gtk.BUTTONS_CLOSE,
+                           unicode(message))
     md.run()
     md.destroy()
 
@@ -145,14 +144,15 @@ class MissionsDialog(gtk.Dialog):
 
         # File column ----------------------------------------------------------
         def relative_path_renderer(treeviewcolumn, cell, model, iterator):
-            value = model.get_value(iterator, MissionsDialog.COLUMNS.RELATIVE_PATH)
+            value = model.get_value(iterator,
+                                    MissionsDialog.COLUMNS.RELATIVE_PATH)
             if not value:
                 value = _("Not selected")
             cell.set_property('text', value)
 
         renderer = gtk.CellRendererText()
-        column = gtk.TreeViewColumn(_("File"), renderer,
-                                    text=MissionsDialog.COLUMNS.RELATIVE_PATH)
+        column = gtk.TreeViewColumn(
+            _("File"), renderer, text=MissionsDialog.COLUMNS.RELATIVE_PATH)
         column.set_sizing(gtk.TREE_VIEW_COLUMN_AUTOSIZE)
         column.set_resizable(True)
         column.set_expand(True)
@@ -261,7 +261,7 @@ class MissionsDialog(gtk.Dialog):
             for i, row in enumerate(self.store):
                 if i == cursor:
                     continue
-                i_name, i_suffix = split_name(name=row[MissionsDialog.COLUMNS.NAME])
+                i_name, i_suffix = split_name(row[MissionsDialog.COLUMNS.NAME])
                 if i_name != name or not i_suffix:
                     continue
                 if suffix <= i_suffix:
@@ -352,6 +352,7 @@ class MissionsDialog(gtk.Dialog):
         info = treeview.get_path_at_pos(int(event.x), int(event.y))
         if info is None:
             return
+
         path, column, cell_x, cell_y = info
         store = treeview.get_model()
 
@@ -371,7 +372,8 @@ class MissionsDialog(gtk.Dialog):
             if relative_path is None:
                 chooser.set_current_folder(MissionManager.get_root_path())
             else:
-                chooser.set_filename(MissionManager.absolute_path(relative_path))
+                file_name = MissionManager.absolute_path(relative_path)
+                chooser.set_filename(file_name)
 
             f_filter = gtk.FileFilter()
             f_filter.set_name("IL-2 FB missions (*.mis)")
@@ -386,11 +388,13 @@ class MissionsDialog(gtk.Dialog):
                 return
 
             try:
-                relative_path = MissionManager.short_relative_path(relative_path)
+                relative_path = \
+                    MissionManager.short_relative_path(relative_path)
             except ValueError as e:
                 show_error(unicode(e))
             else:
-                store[path][MissionsDialog.COLUMNS.RELATIVE_PATH] = relative_path
+                store[path][MissionsDialog.COLUMNS.RELATIVE_PATH] = \
+                    relative_path
 
     def _on_data_changed(self):
         flag = len(self.store) > 0
@@ -590,12 +594,10 @@ class MainWindow(gtk.Window):
         frame = gtk.Frame(label=_("Server connection"))
         frame.add(alignment)
 
-        root_service.register_callbacks(
-            self.on_connection_done,
-            self.on_connection_failed,
-            self.on_connection_closed,
-            self.on_connection_lost)
-
+        root_service.set_callbacks(self.on_connection_done,
+                                   self.on_connection_failed,
+                                   self.on_connection_closed,
+                                   self.on_connection_lost)
         return frame
 
     def on_connect_clicked(self, widget):
@@ -712,17 +714,20 @@ class MainWindow(gtk.Window):
 
         button = to_button(gtk.STOCK_MEDIA_STOP)
         button.set_tooltip_text(_("Stop mission"))
-        button.connect('clicked', lambda *args: root_service.commander.services.missions.mission_stop())
+        method = root_service.commander.services.missions.mission_stop
+        button.connect('clicked', lambda *args: method())
         self.b_mission_stop = button
 
         button = to_button(gtk.STOCK_MEDIA_PLAY)
         button.set_tooltip_text(_("Run mission"))
-        button.connect('clicked', lambda *args: root_service.commander.services.missions.mission_run())
+        method = root_service.commander.services.missions.mission_run
+        button.connect('clicked', lambda *args: method())
         self.b_mission_run = button
 
         button = to_button(gtk.STOCK_REFRESH)
         button.set_tooltip_text(_("Restart mission"))
-        button.connect('clicked', lambda *args: root_service.commander.services.missions.mission_restart())
+        method = root_service.commander.services.missions.mission_restart
+        button.connect('clicked', lambda *args: method())
         self.b_mission_restart = button
 
         button = to_button(gtk.STOCK_MEDIA_NEXT)
@@ -779,8 +784,8 @@ class MainWindow(gtk.Window):
         store = self.mission_selector.get_model()
 
         old_index = self.mission_selector.get_active()
-        old_id = MissionManager.get_current_id() if old_index == -1 else \
-                 store[old_index][0]
+        old_id = (MissionManager.get_current_id() if old_index == -1 else
+                  store[old_index][0])
 
         store.clear()
         new_index = -1
@@ -816,11 +821,12 @@ class MainWindow(gtk.Window):
 
         if new_id != old_id:
             MissionManager.set_current_id(new_id)
+            missions = root_service.commander.services.missions
             if (
                 widget.is_changed_not_from_ui is False
-                and root_service.commander.services.missions.is_mission_playing
+                and missions.is_mission_playing
             ):
-                root_service.commander.services.missions.update_playing_mission()
+                missions.update_playing_mission()
 
         self._update_mission_flow_buttons()
 
@@ -839,7 +845,9 @@ class MainWindow(gtk.Window):
 
         if total:
             index = self.mission_selector.get_active()
-            is_running = root_service.commander.services.missions.is_mission_playing
+
+            missions = root_service.commander.services.missions
+            is_running = missions.is_mission_playing
 
             self.b_mission_first.set_sensitive(index > 0)
             self.b_mission_prev.set_sensitive(total > 1)
